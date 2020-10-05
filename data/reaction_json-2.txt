@@ -1,0 +1,35 @@
+reaction = {
+    'plate': int,
+    'row': int,
+    'col': int,
+    'yield': float,
+    'reactants': [
+        {'name': str,
+        'smiles': str,
+        'category': str,
+        'molecular_weight': float,
+        'volume': float,
+        'surface_area': float,
+        'ovality': float,
+        'hardness': float,
+        'dipole_moment': float,
+        'electronegativity': float,
+        'HOMO_energy': float,
+        'LUMO_energy': float,
+        'vib_modes': tuple(float, float),
+        'atoms': [
+            {'name': str,
+            'atomic_num': int,
+            'nmr_shift': float,
+            'partial_charge': float
+            }
+        ]
+        }
+    ]
+    'product': {
+        'name': str,
+        'smiles': str,
+        ]
+    }
+}
+

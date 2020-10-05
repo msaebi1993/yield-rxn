@@ -1,0 +1,60 @@
+10/05/20 12:27:46: ------------------------------------Dataset-------------------------------------
+10/05/20 12:38:48: ------------------------------------Dataset-------------------------------------
+10/05/20 12:39:45: ------------------------------------Dataset-------------------------------------
+10/05/20 12:40:24: ------------------------------------Dataset-------------------------------------
+10/05/20 12:47:03: Loading Dataset doyle_reactions_data.json in data/
+10/05/20 12:47:50: ------------------------------------Dataset-------------------------------------
+10/05/20 12:48:06: ------------------------------------Dataset-------------------------------------
+10/05/20 12:49:16: Loading Dataset doyle_reactions_data.json in data/
+10/05/20 12:50:56: ------------------------------------Dataset-------------------------------------
+10/05/20 12:51:02: Loading Dataset doyle_reactions_data.json in data/
+10/05/20 12:51:55: ------------------------------------Dataset-------------------------------------
+10/05/20 12:52:07: Loading Dataset doyle_reactions_data.json in data/
+10/05/20 12:52:34: ------------------------------------Dataset-------------------------------------
+10/05/20 12:52:43: Loading Dataset doyle_reactions_data.json in data/
+10/05/20 14:53:12: ------------------------------------Dataset-------------------------------------
+10/05/20 14:53:15: Loading Dataset doyle_reactions_data.json in data/
+10/05/20 14:53:24: Dataset contains 4608 total samples
+10/05/20 14:54:10: ------------------------------------Dataset-------------------------------------
+10/05/20 14:54:14: Loading Dataset doyle_reactions_data.json in data/
+10/05/20 14:54:22: Dataset contains 4608 total samples
+10/05/20 14:55:51: ------------------------------------Dataset-------------------------------------
+10/05/20 14:55:53: Loading Dataset doyle_reactions_data.json in data/
+10/05/20 14:56:02: Dataset contains 4608 total samples
+10/05/20 14:57:43: ------------------------------------Dataset-------------------------------------
+10/05/20 14:57:45: Loading Dataset doyle_reactions_data.json in data/
+10/05/20 14:57:54: Dataset contains 4608 total samples
+10/05/20 14:59:17: ------------------------------------Dataset-------------------------------------
+10/05/20 14:59:21: Loading Dataset doyle_reactions_data.json in data/
+10/05/20 14:59:29: Dataset contains 4608 total samples
+10/05/20 15:54:40: ------------------------------------Dataset-------------------------------------
+10/05/20 15:54:45: Loading Dataset doyle_reactions_data.json in data/
+10/05/20 15:54:53: Dataset contains 4608 total samples
+10/05/20 16:04:01: Splitting dataset into 3687 samples for training and 921 samples for testing
+10/05/20 16:04:01: ----------------------------------Data loaders----------------------------------
+10/05/20 16:04:01: Batch size: 20  Workers: 4  Shuffle per epoch: True
+10/05/20 16:04:01: Drop incomplete batches: True
+10/05/20 16:05:00: ------------------------------------Dataset-------------------------------------
+10/05/20 16:05:02: Loading Dataset doyle_reactions_data.json in data/
+10/05/20 16:05:10: Dataset contains 4608 total samples
+10/05/20 16:06:45: Splitting dataset into 3687 samples for training and 921 samples for testing
+10/05/20 16:06:45: ----------------------------------Data loaders----------------------------------
+10/05/20 16:06:45: Batch size: 20  Workers: 4  Shuffle per epoch: True
+10/05/20 16:06:45: Drop incomplete batches: True
+10/05/20 16:07:08: Splitting dataset into 3687 samples for training and 921 samples for testing
+10/05/20 16:07:08: ----------------------------------Data loaders----------------------------------
+10/05/20 16:07:08: Batch size: 20  Workers: 4  Shuffle per epoch: True
+10/05/20 16:07:08: Drop incomplete batches: True
+10/05/20 16:07:08: -------------------------------------Model--------------------------------------
+10/05/20 16:07:08: Graph convolution layers: 3  Hidden size: 300
+10/05/20 16:07:50: Total Parameters: 735,006
+10/05/20 16:07:50: ------------------------------------Trainer-------------------------------------
+10/05/20 16:07:50: Optimizer: Adam  Beta1: 0.9  Beta2: 0.999
+10/05/20 16:07:50: Learning rate: 0.001  Learning rate decay: 0.9  Steps between updates: 10000
+10/05/20 16:07:50: Weight decay: 0.0  Gradient clipping: None  Positive sample weighting: None
+10/05/20 16:08:43: Total Parameters: 735,006
+10/05/20 16:08:43: ------------------------------------Trainer-------------------------------------
+10/05/20 16:08:43: Optimizer: Adam  Beta1: 0.9  Beta2: 0.999
+10/05/20 16:08:43: Learning rate: 0.001  Learning rate decay: 0.9  Steps between updates: 10000
+10/05/20 16:08:43: Weight decay: 0.0  Gradient clipping: None  Positive sample weighting: None
+10/05/20 16:08:44: ------------------------------------Training------------------------------------
