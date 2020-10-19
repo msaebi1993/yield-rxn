@@ -142,25 +142,39 @@ class RxnGraphDataset(RxnDataset):
     max_num_reactants=4
     def get_reaction_features(self,rxn): #rxn is a Rxn object
         reactants=rxn.reactants # is a mol_obj
-        rxn_feats=self.get_molecule_features(reactants[0])#initialized with the first reactant
+        #rxn_feats=self.get_molecule_features(reactants[0])#initialized with the first reactant
+        rxn_feats=defaultdict(lambda:defaultdict())
+        rxn_feats["yield_label"]=rxn.yields
+        domain_feats=reactants[0].get_attributes()
         mol_idx_feat=defaultdict(lambda:defaultdict())
+        
+        rxn_feats=self.get_molecule_features(mol_obj=None,smiles=rxn.reactants_smile)
+        #for mol_idx in range(1,len(reactants)):
+            #domain_feats=torch.cat((domain_feats,reactants[mol_idx].get_attributes()),dim=0) #retunrs attributes from chemists
+        
+        #rxn_feats["domain_feats"]=domain_feats
+        
+        #for mol_idx in range(len(reactants)):
+            #mol_feat=self.get_molecule_features(reactants[mol_idx])
 
-        for mol_idx in range(len(reactants)):
-            mol_feat=self.get_molecule_features(reactants[mol_idx])
-
-            for feat in mol_feat.keys():
-                mol_idx_feat[feat][mol_idx]=mol_feat
-                if mol_idx>=1:
+            #for feat in mol_feat.keys():
+                #mol_idx_feat[feat][mol_idx]=mol_feat
+                #if mol_idx>=1:
                     #print("\t feat name: ",feat)
                     #print("concatenated feats: ",output_feats[feat].shape)
                     #print("mold feats: ",mol_feat[feat].shape,"\n")
-                    rxn_feats[feat]=torch.cat((rxn_feats[feat],mol_feat[feat]),dim=0) 
+                    #rxn_feats[feat]=torch.cat((rxn_feats[feat],mol_feat[feat]),dim=0) 
         return rxn_feats,mol_idx_feat
 
 
-    def get_molecule_features(self,mol_obj):
+    def get_molecule_features(self,mol_obj=None,smiles=None):
         output=defaultdict(lambda:defaultdict())
-        mol=Chem.MolFromSmiles(mol_obj.smile)
+        if smiles!=None:
+            mol=Chem.MolFromSmiles(smiles)
+        else:
+            
+            smiles=mol_obj.smile
+            mol=Chem.MolFromSmiles(mol_obj.smile)
         atom_idx = torch.tensor([atom.GetIdx()-1 for atom in mol.GetAtoms()], dtype=torch.int64)
 
 
@@ -170,7 +184,7 @@ class RxnGraphDataset(RxnDataset):
             for j in range(i+1, n_atoms):
                 sparse_idx.append([atom_idx[i],atom_idx[j]])
         sparse_idx = torch.tensor(sparse_idx, dtype=torch.int64)
-        atom_feats = self.get_atom_features(mol_obj)
+        atom_feats = self.get_atom_features(mol)
         bond_feats = self.get_bond_features(mol)
         atom_graph = torch.zeros((n_atoms,self.max_nbonds), dtype=torch.int64)
         bond_graph = torch.zeros((n_atoms, self.max_nbonds), dtype=torch.int64)
@@ -181,7 +195,7 @@ class RxnGraphDataset(RxnDataset):
             a2 = bond.GetEndAtom().GetIdx()-1
             idx = bond.GetIdx()
             if n_bonds[a1] == self.max_nbonds or n_bonds[a2] == self.max_nbonds:
-                raise Exception(mol_obj.smile)
+                raise Exception(smiles)
             atom_graph[a1, n_bonds[a1]] = a2
             atom_graph[a2, n_bonds[a2]] = a1
             bond_graph[a1, n_bonds[a1]] = idx
@@ -190,23 +204,25 @@ class RxnGraphDataset(RxnDataset):
             n_bonds[a2] += 1
 
         #bond_labels = get_bond_labels(edits, n_atoms, sparse_idx)
-        binary_feats = self.get_binary_features(mol_obj.smile)
-        domain_features=mol_obj.get_attributes() #retunrs attributes from chemists
+        binary_feats = self.get_binary_features(smiles)
+        #domain_features=mol_obj.get_attributes() #retunrs attributes from chemists
 
         output["atom_feats"]=atom_feats
         output["bond_feats"]=bond_feats
         output["atom_graph"]=atom_graph
         output["bond_graph"]=bond_graph
         output["n_bonds"]=n_bonds
-        output["n_atoms"]=torch.tensor([n_atoms])
+        output["n_atoms"]=n_atoms#torch.tensor([n_atoms])
         #output["bond_labels"][mol_idx]=bond_labels
         output["binary_feats"]=binary_feats
         output["sparse_idx"]=sparse_idx
-        output["molecule_feats"]=domain_features
+        #output["domain_feats"]=domain_features
+        
         return output    
 
-    def get_atom_features(self,mol_obj):
-        mol=Chem.MolFromSmiles(mol_obj.smile)
+    #def get_atom_features(self,mol_obj):
+    def get_atom_features(self,mol):
+        #mol=Chem.MolFromSmiles(mol_obj.smile)
         atom_idx = torch.tensor([atom.GetIdx()-1 for atom in mol.GetAtoms()], dtype=torch.int64)
 
         symbols = [atom.GetSymbol() for atom in mol.GetAtoms()]
@@ -240,7 +256,8 @@ class RxnGraphDataset(RxnDataset):
         symbols = [atom.GetSymbol() for atom in rxn_mol.GetAtoms()]
         all_atoms=set(symbols)
         n_atoms=len(all_atoms)
-        max_n_atoms=5
+        #print(n_atoms)
+        max_n_atoms=10
         mapping=dict(zip( all_atoms, range(len(all_atoms))))
 
         for i, s in enumerate(smiles.split('.')):

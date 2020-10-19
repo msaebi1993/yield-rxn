@@ -24,10 +24,10 @@ class Mol(object):
         self.LUMO_energy=mol_json.get('LUMO_energy',0.0)
         self.atoms=mol_json.get('atoms',{})
         self.atoms_nums=len(self.atoms)
-        self.attributes=torch.tensor([self.molecular_weight,self.volume,
+        self.attributes=torch.tensor([[self.molecular_weight,self.volume,
                                  self.surface_area,self.ovality,
                                  self.hardness,self.dipole_moment,
-                                 self.electronegativity,self.HOMO_energy,self.LUMO_energy])
+                                 self.electronegativity,self.HOMO_energy,self.LUMO_energy]])
     
 
     

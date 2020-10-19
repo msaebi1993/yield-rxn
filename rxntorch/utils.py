@@ -20,7 +20,9 @@ def collate_fn(batch_data):
                 values[i,:n_atom,:n_atom] = label
         elif key == "n_atoms":
             values = torch.tensor([sample[key] for sample in batch_data], dtype=torch.int32)
-        elif key == "bond_labels":
+        #elif key == "bond_labels":
+        #    values = torch.cat([sample[key] for sample in batch_data], dim=0)
+        elif key == "yield_label":
             values = torch.cat([sample[key] for sample in batch_data], dim=0)
         elif key == "sparse_idx":
             n_pairs = [sample[key].shape[0] for sample in batch_data]

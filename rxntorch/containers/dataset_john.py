@@ -133,7 +133,7 @@ class RxnGraphDataset(RxnDataset):
 
         n_atoms = mol.GetNumAtoms()
         sparse_idx = []
-        for i in range(n_atoms):
+        for i in range(n_ato):
             for j in range(i+1, n_atoms):
                 sparse_idx.append([atom_idx[i],atom_idx[j]])
         sparse_idx = torch.tensor(sparse_idx, dtype=torch.int64)

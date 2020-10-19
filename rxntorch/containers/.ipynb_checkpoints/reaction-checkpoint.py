@@ -8,7 +8,7 @@ class Rxn(object):
     """
     def __init__(self,product,reactants,r_yield):
         if isinstance(r_yield , float):
-            self.yields = float(r_yield)
+            self.yields = float(r_yield)/100
         else: 
             self.yields = -1
         self.reactants = [Mol(r) for r in reactants]
