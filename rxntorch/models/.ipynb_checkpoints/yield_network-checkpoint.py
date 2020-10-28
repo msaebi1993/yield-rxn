@@ -9,7 +9,7 @@ import torch.optim as opt
 from .wln import WLNet
 from .attention import Attention
 from .yield_scoring import YieldScoring
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score,r2_score
 
 class YieldNet(nn.Module):
     def __init__(self, depth, afeats_size, bfeats_size, hidden_size, binary_size):
@@ -18,18 +18,23 @@ class YieldNet(nn.Module):
         self.wln = WLNet(depth, afeats_size, bfeats_size, hidden_size)
         self.attention = Attention(hidden_size, binary_size)
         #self.reactivity_scoring = ReactivityScoring(hidden_size, binary_size)
-        self.yield_score = YieldScoring(hidden_size, binary_size)
+        self.yield_scoring= YieldScoring(hidden_size, binary_size)
 
     def forward(self, fatoms, fbonds, atom_nb, bond_nb, num_nbs, n_atoms, binary_feats, mask_neis, mask_atoms, sparse_idx):
         local_features = self.wln(fatoms, fbonds, atom_nb, bond_nb, num_nbs, n_atoms, mask_neis, mask_atoms)
-        local_pair, global_pair = self.attention(local_features, binary_feats, sparse_idx)
-        
-        yield_score = self.yield_scoring(local_pair, global_pair, binary_feats, sparse_idx)
-        sample_idxs = [torch.where(sparse_idx[:,0] == i)[0] for i in range(local_features.shape[0])]
-        sample_scores = [yield_scores[sample_idx] for sample_idx in sample_idxs]
-        sample_topks = [torch.topk(sample_score.flatten(), 80) for sample_score in sample_scores]
-        topks = torch.stack([topk for (_, topk) in sample_topks], dim=0)
-        return yield_scores, topks, sample_idxs
+        #print(local_features.shape)
+        #local_pair, global_pair = self.attention(local_features, binary_feats, sparse_idx)
+        global_features = self.attention(local_features, binary_feats, sparse_idx)
+        #print(global_features.shape)
+        #print(local_features.shape,global_features.shape)
+        yield_scores = self.yield_scoring(local_features, global_features, binary_feats, sparse_idx)
+        #print(yield_scores.shape)
+        #sample_idxs = [torch.where(sparse_idx[:,0] == i)[0] for i in range(local_features.shape[0])]
+        #sample_scores = [yield_scores[sample_idx] for sample_idx in sample_idxs]
+        #sample_topks = [torch.topk(sample_score.flatten(), 80) for sample_score in sample_scores]
+        #topks = torch.stack([topk for (_, topk) in sample_topks], dim=0)
+        #return yield_scores, topks, sample_idxs
+        return yield_scores
 
 
 class YieldTrainer(nn.Module):
@@ -70,7 +75,7 @@ class YieldTrainer(nn.Module):
         test_acc10 = test_acc12 = test_acc16 = test_acc20 = test_acc40 = test_acc80 = 0.0
         iters = len(data_loader)
         n_samples = len(data_loader.dataset)
-
+        r2=0
         for i, data in enumerate(data_loader):
             data = {key: value.to(self.device) for key, value in data.items()}
 
@@ -82,7 +87,7 @@ class YieldTrainer(nn.Module):
                 data['n_atoms'].unsqueeze(-1) > torch.arange(0, max_n_atoms, dtype=torch.int32, device=self.device).view(1, -1),
                 -1)
 
-            yield_scores, top_k, sample_idxs = self.model.forward(data['atom_feats'], data['bond_feats'],
+            yield_scores = self.model.forward(data['atom_feats'], data['bond_feats'],
                                                     data['atom_graph'], data['bond_graph'], data['n_bonds'],
                                                     data['n_atoms'], data['binary_feats'], mask_neis, mask_atoms,
                                                     data['sparse_idx'])
@@ -108,52 +113,56 @@ class YieldTrainer(nn.Module):
                     nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
                 self.optimizer.step()
 
-            batch_size = len(sample_idxs)
-            yield_labels = [data['yield_label'][sample_idx] for sample_idx in sample_idxs]
+            #batch_size = len(sample_idxs)
+            #yield_labels = [data['yield_label'][sample_idx] for sample_idx in sample_idxs]
             
             #sp_labels = [torch.stack(torch.where(bond_label.flatten() == 1), dim=-1) for bond_label in yield_labels]
             #hits_10 = [(sp_labels[i] == top_k[i][:10].unsqueeze(0)).any(dim=1) for i in range(batch_size)]
             #all_correct_10 = [mol_hits.all().int() for mol_hits in hits_10]
             #sum_acc10 += sum(all_correct_10).item()
-            auroc += (roc_auc_score(yield_labels.cpu(), yield_scores.cpu().detach().numpy())).mean().item()
+            try:
+                r2 += (r2_score(data['yield_label'].cpu().detach().numpy(), yield_scores.cpu().detach().numpy())).mean().item()
+                #print("R^2: ",r2)
+                if (i+1) % self.log_freq == 0:
+                    if train:
+                        post_fix = {
+                            "epoch": epoch,
+                            "iter": (i+1),
+                            "iters": iters,
+                            "avg_loss": avg_loss,
+                            #"acc10": sum_acc10 / (self.log_freq * batch_size),
+                            "r2": r2,
+                            "pnorm": param_norm,
+                            "gnorm": sum_gnorm
+                        }
+                        logging.info(("Epoch: {epoch:2d}  Iter: {iter:5d}  Loss: {avg_loss:7.5f}  R2: {r2:6.2%}  " 
+                            "Param norm: {pnorm:8.4f}  Grad norm: {gnorm:8.4f}").format(
+                            **post_fix))
+                    else:
+                        post_fix = {
+                            "epoch": epoch,
+                            "iter": (i+1),
+                            "iters": iters,
+                            "avg_loss": avg_loss,
+                            "r2": r2
 
-            if (i+1) % self.log_freq == 0:
-                if train:
-                    post_fix = {
-                        "epoch": epoch,
-                        "iter": (i+1),
-                        "iters": iters,
-                        "avg_loss": avg_loss,
-                        #"acc10": sum_acc10 / (self.log_freq * batch_size),
-                        "auroc": auroc,
-                        "pnorm": param_norm,
-                        "gnorm": sum_gnorm
-                    }
-                    logging.info(("Epoch: {epoch:2d}  Iter: {iter:5d}  Loss: {avg_loss:7.5f}  AUROC: {auroc:6.2%}  " 
-                        "Param norm: {pnorm:8.4f}  Grad norm: {gnorm:8.4f}").format(
-                        **post_fix))
-                else:
-                    post_fix = {
-                        "epoch": epoch,
-                        "iter": (i+1),
-                        "iters": iters,
-                        "avg_loss": avg_loss,
-                        "auroc": auroc
+                        }
+                        logging.info(("Epoch: {epoch:2d}  Iter: {iter:5d}  Loss: {avg_loss:7.5f}  R2: {r2:6.2%}  ").format(
+                            **post_fix))
+                    #sum_acc10 = sum_acc12 = sum_acc16 = sum_acc20 = sum_acc40 = sum_acc80 = 0.0
+                    avg_loss = 0.0
+                    sum_gnorm = 0.0
 
-                    }
-                    logging.info(("Epoch: {epoch:2d}  Iter: {iter:5d}  Loss: {avg_loss:7.5f}  AUROC: {auroc:6.2%}  ").format(
-                        **post_fix))
-                #sum_acc10 = sum_acc12 = sum_acc16 = sum_acc20 = sum_acc40 = sum_acc80 = 0.0
-                avg_loss = 0.0
-                sum_gnorm = 0.0
-
-            if self.total_iters % self.lr_steps == 0:
-                for param_group in self.optimizer.param_groups:
-                    param_group['lr'] *= self.lr_decay
-                logging.info("Learning rate changed to {:f}".format(self.optimizer.param_groups[0]['lr']))
-        if not train:
-            logging.info("Epoch: {:2d}  Loss: {:f}  AUROC: {auroc:6.2%}  ".format(epoch,(test_loss / n_samples), auroc))
-
+                if self.total_iters % self.lr_steps == 0:
+                    for param_group in self.optimizer.param_groups:
+                        param_group['lr'] *= self.lr_decay
+                    logging.info("Learning rate changed to {:f}".format(self.optimizer.param_groups[0]['lr']))
+                if not train:
+                    logging.info("Epoch: {:2d}  Loss: {:f}  R2: {r2:6.2%}  ".format(epoch,(test_loss / n_samples), r2/n_samples))
+            
+            except:
+                None
+            
     def save(self, epoch, filename, path):
         filename = filename + ".ep%d" % epoch
         output = os.path.join(path, filename)

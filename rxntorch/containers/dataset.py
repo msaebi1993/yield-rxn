@@ -144,11 +144,13 @@ class RxnGraphDataset(RxnDataset):
         reactants=rxn.reactants # is a mol_obj
         #rxn_feats=self.get_molecule_features(reactants[0])#initialized with the first reactant
         rxn_feats=defaultdict(lambda:defaultdict())
-        rxn_feats["yield_label"]=rxn.yields
+
         domain_feats=reactants[0].get_attributes()
         mol_idx_feat=defaultdict(lambda:defaultdict())
         
         rxn_feats=self.get_molecule_features(mol_obj=None,smiles=rxn.reactants_smile)
+        rxn_feats["yield_label"]=torch.tensor([rxn.yields])
+        #print(rxn_feats["yield_label"])
         #for mol_idx in range(1,len(reactants)):
             #domain_feats=torch.cat((domain_feats,reactants[mol_idx].get_attributes()),dim=0) #retunrs attributes from chemists
         
