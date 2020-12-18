@@ -242,7 +242,7 @@ class RxnGraphDataset(RxnDataset):
 
         #domain_feats=self.normalize_mol_attributes(reactants[0].get_attributes())
         domain_feats=torch.tensor(list(self.domain_feats[rxn.Id])).unsqueeze(0)
-        domain_feats
+        
         mol_idx_feat=defaultdict(lambda:defaultdict())
         
         rxn_feats=self.get_molecule_features(mol_obj=None,smiles=rxn.reactants_smile)
