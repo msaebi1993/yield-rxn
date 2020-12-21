@@ -53,7 +53,8 @@ class YieldTrainer(nn.Module):
         self.pos_weight = pos_weight
         self.total_iters = 0
         self.optimizer = opt.Adam(self.model.parameters(), lr=self.lr, betas=betas, weight_decay=weight_decay)
-
+        #self.lr_scheduler = opt.lr_scheduler.ExponentialLR(optimizer=self.optimizer, gamma=1-self.lr_decay)
+        self.lr_scheduler = opt.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=5, verbose=True,factor=self.lr_decay,min_lr=1e-6,)
     def train_epoch(self, epoch, data_loader):
         logging.info("{:-^80}".format("Training"))
         self.model.train()
@@ -116,8 +117,8 @@ class YieldTrainer(nn.Module):
             pred_yields=np.append(pred_yields,bb,0)
                 
             if aa.shape !=bb.shape or correct_yields.shape != pred_yields.shape:
-                print(aa.shape ,bb.shape )
-                print(correct_yields.shape ,pred_yields.shape)
+                #print(aa.shape ,bb.shape )
+                #print(correct_yields.shape ,pred_yields.shape)
                 raise ValueError("Found input variables with inconsistent numbers of elements")
                 
             tmp_r2=r2_score(correct_yields,pred_yields)
@@ -125,7 +126,7 @@ class YieldTrainer(nn.Module):
                 
             tmp_r2=0 if math.isnan(tmp_r2) else tmp_r2
             cum_r2=0 if math.isnan(cum_r2) else cum_r2
-
+            learning_rate=np.mean([ group['lr'] for group in self.optimizer.param_groups ])
             if train:
                 self.total_iters += 1
                 self.optimizer.zero_grad()
@@ -137,7 +138,9 @@ class YieldTrainer(nn.Module):
                 if self.grad_clip is not None:
                     nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
                 self.optimizer.step()
-           
+                
+                #self.lr_scheduler.get_lr()
+                
             if (i+1) % self.log_freq == 0:
                 if train:
                     post_fix = {
@@ -146,11 +149,12 @@ class YieldTrainer(nn.Module):
                             "iters": iters,
                             "avg_loss": avg_loss,
                             "r2": tmp_r2,
-                            "cum_r2":cum_r2/i,
+                            #"cum_r2":cum_r2/i,
                             "pnorm": param_norm,
-                            "gnorm": sum_gnorm
+                            "gnorm": sum_gnorm,
+                            "learning_rate":learning_rate
                     }
-                    logging.info(("Epoch: {epoch:2d}  Iter: {iter:5d}  Loss: {avg_loss:7.5f}  R2: {r2:6.2%}  Cum_R2:{cum_r2:6.2%} " 
+                    logging.info(("Epoch: {epoch:2d}  Iter: {iter:5d}  Loss: {avg_loss:7.5f}  R2: {r2:6.2%}  LR:{learning_rate:8.8f} " 
                             "Param norm: {pnorm:8.4f}  Grad norm: {gnorm:8.4f}").format(
                             **post_fix))
                             
@@ -164,27 +168,30 @@ class YieldTrainer(nn.Module):
                             "iters": iters,
                             "avg_loss": avg_loss,
                             "r2": tmp_r2,
-                            "cum_r2":cum_r2/i
+                            #"cum_r2":cum_r2/i
+                            "learning_rate": learning_rate
                         }
-                    logging.info(("Epoch: {epoch:2d}  Iter: {iter:5d}  Loss: {avg_loss:7.5f}  R2: {r2:6.2%}  Cum_R2:{cum_r2:6.2%} ").format(
+                    logging.info(("Epoch: {epoch:2d}  Iter: {iter:5d}  Loss: {avg_loss:7.5f}  R2: {r2:6.2%}  LR:{learning_rate:8.8f} ").format(
                             **post_fix))
                     #sum_acc10 = sum_acc12 = sum_acc16 = sum_acc20 = sum_acc40 = sum_acc80 = 0.0
                     
                 avg_loss = 0.0
                 sum_gnorm = 0.0
-                
+            """ 
             if self.total_iters % self.lr_steps == 0:
                 for param_group in self.optimizer.param_groups:
                     param_group['lr'] *= self.lr_decay
                 logging.info("Learning rate changed to {:f}".format(self.optimizer.param_groups[0]['lr']))
-        
+            """   
         if not train:
-            logging.info("Epoch: {:2d}  Loss: {:f}  R2: {:6.2%}  Cum_R2:{:6.2%}  ".format(epoch,test_loss, tmp_r2,cum_r2/i))
+            logging.info("Epoch: {:2d}  Loss: {:f}  R2: {:6.2%}  LR:{:8.8f}  ".format(epoch,test_loss, tmp_r2,learning_rate))
             return correct_yields, pred_yields, tmp_r2, test_loss
             
         if train:
+            self.lr_scheduler.step(avg_loss)
             return tmp_r2,avg_loss
-
+        #self.lr_scheduler.step(avg_loss)
+        
             
     def save(self, epoch, filename, path):
         filename = filename + ".ep%d" % epoch
@@ -192,3 +199,4 @@ class YieldTrainer(nn.Module):
         torch.save(self.model.cpu(), output)
         self.model.to(self.device)
         logging.info("Model saved to {} in {}:".format(filename, path))
+

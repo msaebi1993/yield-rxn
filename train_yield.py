@@ -166,12 +166,39 @@ trainer = RxnTrainer(net, lr=args.lr, betas=(args.adam_beta1, args.adam_beta2), 
 #Train
 ################################################################
 
+#f_true = open(output_path+'train_scores.txt', 'a')
+#f_pred = open(output_path+'y_pred.txt', 'w')
+
+train_r2 = open(output_path+'train_scores.txt', 'a')
+test_r2 = open(output_path+'test_scores.txt', 'a')
+
+train_l = open(output_path+'train_loss.txt', 'a')
+test_l = open(output_path+'test_loss.txt', 'a')
+for epoch in range(args.epochs):
+    r2_train, train_loss= trainer.train_epoch(epoch, train_dataloader)
+    #trainer.save(epoch, args.output_name, args.output_path)
+    a2, b2, r2_test ,test_loss = trainer.test_epoch(epoch, test_dataloader)
+
+    train_r2.write(str(float(r2_train))+',')
+    test_r2.write(str(float(r2_test))+',')
+    
+    train_l.write(str(float(train_loss))+',')
+    test_l.write(str(float(test_loss))+',')
+              
+train_r2.close()  
+test_r2.close()
+train_l.close()
+test_l.close()
+              
+"""
 a2,b2=[],[]
 
 train_scores =[]
 test_scores =[]
 train_losses = []
 test_losses = []
+
+
 for epoch in range(args.epochs):
     r2_train, train_loss= trainer.train_epoch(epoch, train_dataloader)
     #trainer.save(epoch, args.output_name, args.output_path)
@@ -192,3 +219,4 @@ with open(output_path+'train_scores.txt', 'w') as train_r2, open(output_path+'te
 with open(output_path+'train_loss.txt', 'w') as train_l, open(output_path+'test_loss.txt', 'w') as test_l:
     train_l.write(','.join(map(str, [float(n) for n in train_losses])))
     test_l.write(','.join(map(str, [float(n) for n in test_losses])))
+"""

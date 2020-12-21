@@ -11,6 +11,7 @@ class Rxn(object):
             self.yields = float(r_yield)/100
         else: 
             self.yields = -1
+        
         self.reactants = [Mol(r) for r in reactants]
         self.products = [Mol(product)]
         self.Id= Id
