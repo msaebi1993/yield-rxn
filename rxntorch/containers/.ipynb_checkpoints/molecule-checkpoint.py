@@ -11,6 +11,8 @@ class Mol(object):
         self.smile = mol_json.get('smiles','')
         self.name = mol_json.get('name','')
         self.category = mol_json.get('category','')
+        if self.category=='':
+            self.category = mol_json.get('Category','')
         """
         self.molecular_weight = float(mol_json.get('molecular_weight',0.0))
         self.volume = float(mol_json.get('volume',0.0))

@@ -13,9 +13,10 @@ class YieldScoring(nn.Module):
         self.fcglobal = Linear(hidden_size, hidden_size)
         self.fcbinary = Linear(binary_size, hidden_size, bias=False)
         self.fcscore = Linear(hidden_size, 1)
-        self.dcscore = Linear(hidden_size, 1)
-        self.domain= Linear(118, hidden_size)
-
+        #self.dcscore = Linear(hidden_size, 1)
+        #self.domain= Linear(118, hidden_size)
+        #self.finalscore = Linear(2,1)
+        
         
     def forward(self, local_features, global_features, binary, sparse_idx,domain_feats):
         l1, l2, l3 ,l4 = binary.shape
@@ -58,8 +59,17 @@ class YieldScoring(nn.Module):
             #print(score_d.shape)
             #final_score=lll
             score_d_avg=torch.mean(torch.abs(score_g),dim=1)
-            #print(score_d_avg.shape)
             final_score=(score_d_avg+score_d)/2
+            
+            #tmp=torch.cat([score_d_avg,score_d],dim=1)
+            #final_score=self.finalscore(tmp)
+            
+            #print(final_score)
+            return final_score
+        else:
+            score_g = self.fcscore(features)
+            #final_score=torch.mean(torch.abs(score_g),dim=1)
+            final_score=torch.mean(torch.sigmoid(score_g),dim=1)
             return final_score
             #print(final_score.shape)
         #elif self.use_domain=='only_domain':

@@ -8,7 +8,7 @@ class Attention(nn.Module):
     def __init__(self, hidden_size, binary_size):
         super(Attention, self).__init__()
         self.fcapair = Linear(hidden_size, hidden_size, bias=False)
-        self.fcbinary = Linear(int(binary_size/10), hidden_size)
+        self.fcbinary = Linear(int(binary_size/15), hidden_size)
         self.fcattention = Linear(hidden_size, 1)
         cuda_condition= True
         self.device = torch.device("cuda" if cuda_condition else "cpu")
