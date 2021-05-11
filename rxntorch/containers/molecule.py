@@ -48,7 +48,7 @@ class Mol(object):
                                  self.hardness,self.dipole_moment,
                                  self.electronegativity,self.HOMO_energy,self.LUMO_energy]])
         
-
+        
     def get_func(self,mol_json,key):
         if mol_json.get(key,0) is None:
             return -1

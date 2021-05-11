@@ -6,19 +6,29 @@ import rdkit.Chem.AllChem as AllChem
 class Rxn(object):
     """
     """
-    def __init__(self,Id,reactants,r_yield):
+    def __init__(self,Id,reactants,solvent,base,r_yield):
         if isinstance(r_yield , float):
             self.yields = float(r_yield)/100
         else: 
             self.yields = -1
-        
-        self.reactants = [Mol(r) for r in reactants]
+            
+        self.reactants = []    
+        for comp in reactants:
+            smiles= comp.get('smiles','')
+            self.reactants.append(smiles)
+            
+        self.reactants.append(solvent)
+        self.reactants.append(base)
+            
+        self.mol_reactants = [Mol(r) for r in reactants]
         #self.products = [Mol(product)]
         self.Id= Id
         #print('.'.join([mol.smile for mol in self.products]))        
     @property
     def reactants_smile(self):
-        return '.'.join([mol.smile for mol in self.reactants])
+        #return '.'.join([mol.smile for mol in self.reactants])
+        #print(self.Id,[smiles for smiles in self.reactants])
+        return '.'.join([smiles for smiles in self.reactants])
 
     #@property
     #def products_smile(self):

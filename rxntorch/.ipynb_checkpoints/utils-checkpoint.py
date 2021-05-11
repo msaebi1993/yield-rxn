@@ -24,39 +24,19 @@ def collate_fn(batch_data):
                 
             values = torch.tensor([sample[key] for sample in batch_data], dtype=torch.int32)
             
-            #print(values.shape)
-        #elif key == "bond_labels":
-        #    values = torch.cat([sample[key] for sample in batch_data], dim=0)
         elif key == "yield_label":
             values = torch.cat([torch.tensor(sample[key].unsqueeze(1), dtype=torch.float) for sample in batch_data], dim=0)
-            #values = pad_sequence([sample[key].unsqueeze(1) for sample in batch_data],batch_first=True)
-            #values = values
         elif key == "sparse_idx":
             n_pairs = [sample[key].shape[0] for sample in batch_data]
             batch_idxs = [torch.full((n_pairs[i],1), i, dtype=torch.int64) for i in range(len(n_pairs))]
             values = torch.cat([torch.cat([batch_idx, sample[key]], dim=1) for (
                 batch_idx, sample) in zip(batch_idxs, batch_data)], dim=0)
         elif key== 'domain_feats':
-            #l=[sample[key].squeeze() for sample in batch_data]
-            #print(len(l))
             values = pad_sequence([sample[key].squeeze() for sample in batch_data], batch_first=True)
-            #values= torch.tenssor([sample[key].squeeze() for sample in batch_data], dtype=torch.float)
-            #for sample in batch_data:
-                #a=sample[key].squeeze()
-                #print(a.shape)
-            #values= torch.tensor([sample[key].squeeze() for sample in batch_data], dtype=torch.float)
-            
-            #print(len(values))
-            #print(values.shape)
-            #values = torch.tensor([sample[key] for sample in batch_data], dtype=torch.float)
-            #print("values: ",values.shape)
-        
         else:
-            #print(key)
-            #print(batch_data.shape)
+
             values = pad_sequence([sample[key] for sample in batch_data], batch_first=True)
             
-            #print("values: ",values.shape)
         output[key] = values
     return output
 

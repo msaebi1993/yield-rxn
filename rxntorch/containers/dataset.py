@@ -87,30 +87,37 @@ class RxnGraphDataset(RxnDataset):
         bins     (dict): contains lists of indices to map rxn_strs to bin sizes
                 for mapping data into efficient batches.
     """    
-    def __init__(self, file_name, mol_path,path):
+    def __init__(self, file_name, path, use_domain):
         super(RxnGraphDataset, self).__init__(file_name, path)
         self.file_name = file_name
-        self.domain_file = os.path.join(path,file_name.split('.')[0]+'.txt')
+        if use_domain=='no_rdkit':
+            self.domain_file = os.path.join(path,file_name.split('.')[0]+'_raw_nordkit.txt')
+        else: #if it's rdkit or False. If 
+            self.domain_file = os.path.join(path,file_name.split('.')[0]+'.txt')
+            
+            
+        self.data_name= file_name.split('/')[0]
+        #logging.info(file_name, self.domain_file,mol_path,path)
         self.path = path
         self.rxns = []
         self.degree_codec = LabelEncoder()
         self.symbol_codec = LabelEncoder()
         self.expl_val_codec = LabelEncoder()
         self.bond_type_codec = LabelEncoder()
-        #self.mol_path =os.path.join(self.path, mol_path)        
+        self.mol_path =os.path.join(self.path, self.data_name, self.data_name+'_reaction_mols')        
         
         self.max_nbonds = 15
         self.max_natoms = 15
-        self.weights, self.volumes, self.surface_areas=[math.inf,-math.inf],[math.inf,-math.inf],[math.inf,-math.inf]
-        self.vs=[math.inf,-math.inf]
-        self.ovalities, self.hardnesses=[math.inf,-math.inf],[math.inf,-math.inf]
-        self.dipole_moments, self.electroes=[math.inf,-math.inf],[math.inf,-math.inf]
-        self.HOMOs,self.LUMOs =[math.inf,-math.inf],[math.inf,-math.inf]
-        self.charges, self.shifts =[math.inf,-math.inf],[math.inf,-math.inf]
+        self.max_n_all_atoms=0
+        max_min_dic={'su': [-184,634],
+                      'az': [],
+                     'dy':[-116,514]}
+            
         
-        #self.smiles_mapping = self.get_atom_mapping_doyle(self.mol_path+'/*.mol') # get atom mapping for all molecules. 
+        #self.max , self.min = max_min_dic[self.data_name][1] , max_min_dic[self.data_name][0]
+        
+        #self.smiles_mapping = self.get_atom_mapping(self.mol_path+'/*.sdf') # get atom mapping for all molecules. 
                                                                                  # Key  for each moleculeis smiles string        
-        self.lums=set()
         self._init_dataset()
         
     def _init_dataset(self):
@@ -121,105 +128,67 @@ class RxnGraphDataset(RxnDataset):
         explicit_valences = set()
         bond_types = set()
         i=0
+        
         #build domain dictionary
-        self.domain_feats=defaultdict(list)
-        '''
-        lines=open(self.domain_file,'r').readlines()
-        
-        
+        self.domain_feats=defaultdict(list)      
+        lines=open(self.domain_file,'r').readlines()                    
         for line in lines:
             key,vals=line.strip('\n').split('\t')
             self.domain_feats[str(key)]= [float(i) for i in vals.split(',')]
-        ''' 
-        #for data_type in ['doyle','suzuki','az']:
-            #file_name= data_type+'_reactions_data.json'
-        for data_type in ['combo_train','su_test','az_test','dy_test']:
-            file_name= data_type+'.json'
-            with open(os.path.join(self.path, file_name)) as datafile:
+        
+        if True:
+            file_name = self.data_name+'_reactions_data.json'
+            data_type = self.data_name
+            with open(os.path.join(self.path, self.data_name,file_name)) as datafile:
 
                 data = json.load(datafile)
-                if 'combo' in file_name:
-                    lines= data['train']
-                elif 'test' in file_name:
-                    lines = data['test']
+                lines= data
+                solvent_key='solvent' if 'solvent' in lines[0].keys() else 'Solvent'
+                base_key= 'Base' if 'Base' in lines[0].keys() else 'base'
+                
+                
                 for line in lines:
-                    #product=line['product']
-                    name= reaction_num = line["Id"]
-                    r_yield=line['yield']
-                    '''
-                    #if 'combo' in file_name or 'test' in file_name:
-                    #    name= reaction_num = line["Id"]
-                        r_yield=line['yield']
                         
                     if 'az' in file_name:
-                        name= reaction_num = line["Reaction_Num"]
-                        r_yield=line['yield']['Yield']
+                        name= reaction_num = line["reaction_Num"]
+                        r_yield=line['yield']['yield']
 
-                    elif 'doyle' in file_name:
-                        plate, row, col = line["plate"], line["row"], line["col"]
-                        name="-".join(map(str,[plate, row, col]))
-                        r_yield=line['yield']
-
-                    elif 'suzuki' in file_name:
+                    elif 'su' in file_name or 'dy' in file_name:
                         name= reaction_num = line["Id"]
                         r_yield=line['yield']
-                    '''
+                    
                     reactants=line['reactants']
+                    base = line.get(base_key,{}).get('smiles','')
+                    solvent=  line.get(solvent_key,[''])[0]
+                    if 'dy' in file_name:
+                        solvent='CS(=O)C'
+                    rxn = Rxn(name,reactants,solvent,base,r_yield)
+                    reactants=rxn.reactants
 
+                    n_atoms=Chem.MolFromSmiles(rxn.reactants_smile).GetNumAtoms()
+                    self.max_n_all_atoms = max(self.max_n_all_atoms, n_atoms)
 
-                    rxn = Rxn(name,reactants,r_yield)
-                    #if self.isfloat(r_yield):
-                    if True:
-                        if self.file_name==file_name:
-                            i+=1
-                            self.rxns.append(rxn)
-                        mol = Chem.MolFromSmiles(rxn.reactants_smile)
+                    if data_type in self.file_name:
+                        i+=1
+                        self.rxns.append(rxn)
+                    mol = Chem.MolFromSmiles(rxn.reactants_smile)
 
-                        for atom in mol.GetAtoms():   
-                            symbols.add(atom.GetSymbol())
-                            degrees.add(atom.GetDegree())
-                            explicit_valences.add(atom.GetExplicitValence())
-                        for bond in mol.GetBonds():
-                            bond_types.add(bond.GetBondType())
+                    for atom in mol.GetAtoms():   
+                        symbols.add(atom.GetSymbol())
+                        degrees.add(atom.GetDegree())
+                        explicit_valences.add(atom.GetExplicitValence())
+                    for bond in mol.GetBonds():
+                        bond_types.add(bond.GetBondType())
 
             symbols.add("unknown")
             logging.info("Dataset contains {:d} total samples".format(len(self.rxns)))
             logging.info("{:d} number of appends ".format(i))
+            logging.info("{:d} max number of atoms ".format(self.max_n_all_atoms))
         self.degree_codec.fit(list(degrees))
         self.symbol_codec.fit(list(symbols))
         self.expl_val_codec.fit(list(explicit_valences))
         self.bond_type_codec.fit(list(bond_types))
         
-    def get_atom_mapping_doyle(self,mol_dir):
-    
-        smiles_mapping=defaultdict(dict) 
-
-        for mol_fn in glob.glob(mol_dir):
-            atoms , labels, atom_mapping =[], [], []
-            m = Chem.MolFromMolFile(mol_fn)
-            smiles=Chem.MolToSmiles(m)
-            mol_lines=open(mol_fn,'r').readlines()
-
-            for i,line in enumerate(mol_lines[4:]):
-                l=re.sub(' +', ' ', line.strip('\n'))
-                l2=l.split(' ')
-                if len(l2)==17:
-                    atom=l2[4]
-                    if atom !='' and '*' not in atom and 'H' not in atom:
-                        atoms.append(atom)
-                if "atom_labels" in line:
-                    labels=[i.strip('*') for i in mol_lines[i+1+4].strip('\n').split(' ') if ((i!='') and ('H' not in i))]
-            if len(atoms)==len(labels):
-                for i in range(len(atoms)):
-                    atom_mapping.append((atoms[i],labels[i]))            
-            else:
-                print('Atoms and lables don\'t match')
-                atom_mapping=[]
-            if smiles not in smiles_mapping:
-                smiles_mapping[mol_fn.split('/')[-1].split('.')[0]]=atom_mapping
-            else:
-                print("key exsists")
-        return smiles_mapping
 
 
     def __getitem__(self, idx):
@@ -244,9 +213,7 @@ class RxnGraphDataset(RxnDataset):
         reactants=rxn.reactants # is a mol_obj
         #rxn_feats=self.get_molecule_features(reactants[0])#initialized with the first reactant
         rxn_feats=defaultdict(lambda:defaultdict())
-
         #domain_feats=self.normalize_mol_attributes(reactants[0].get_attributes())
-        
 
         domain_feats=torch.tensor(list(self.domain_feats[str(rxn.Id)])).unsqueeze(0)
         mol_idx_feat=defaultdict(lambda:defaultdict())
@@ -254,27 +221,9 @@ class RxnGraphDataset(RxnDataset):
         rxn_feats=self.get_molecule_features(mol_obj=None,smiles=rxn.reactants_smile)
         rxn_feats["yield_label"]=torch.tensor([rxn.yields])
         
-        #retunrs attributes from chemists
-        #for mol_idx in range(1,len(reactants)):
-            #current_molecule=reactants[mol_idx]
-            #norm_mol_attributes = self.normalize_mol_attributes(current_molecule.get_attributes())
-            #domain_feats=torch.cat((domain_feats,self.get_atom_domain_features(current_molecule),norm_mol_attributes),dim=1) 
-            
-            #domain_feats = torch.cat((domain_feats,norm_mol_attributes),dim=1) 
-            #domain_feats=torch.tensor([0,0,0])
             
         rxn_feats["domain_feats"]=domain_feats
         
-        #for mol_idx in range(len(reactants)):
-            #mol_feat=self.get_molecule_features(reactants[mol_idx])
-
-            #for feat in mol_feat.keys():
-                #mol_idx_feat[feat][mol_idx]=mol_feat
-                #if mol_idx>=1:
-                    #print("\t feat name: ",feat)
-                    #print("concatenated feats: ",output_feats[feat].shape)
-                    #print("mold feats: ",mol_feat[feat].shape,"\n")
-                    #rxn_feats[feat]=torch.cat((rxn_feats[feat],mol_feat[feat]),dim=0) 
         return rxn_feats,mol_idx_feat
 
 
@@ -287,26 +236,26 @@ class RxnGraphDataset(RxnDataset):
             mol=Chem.MolFromSmiles(mol_obj.smile)
         atom_idx = torch.tensor([atom.GetIdx()-1 for atom in mol.GetAtoms()], dtype=torch.int64)
 
-
         n_atoms = mol.GetNumAtoms()
         sparse_idx = []
         for i in range(n_atoms):
             for j in range(i+1, n_atoms):
                 sparse_idx.append([atom_idx[i],atom_idx[j]])
+                
         sparse_idx = torch.tensor(sparse_idx, dtype=torch.int64)
         atom_feats= self.get_atom_features(mol)
         bond_feats = self.get_bond_features(mol)
         atom_graph = torch.zeros((n_atoms,self.max_nbonds), dtype=torch.int64)
         bond_graph = torch.zeros((n_atoms, self.max_nbonds), dtype=torch.int64)
         n_bonds = torch.zeros((n_atoms,), dtype=torch.int32)
-        #print(n_bonds)
+
         for bond in mol.GetBonds():
             a1 = bond.GetBeginAtom().GetIdx()-1
             a2 = bond.GetEndAtom().GetIdx()-1
             idx = bond.GetIdx()
             if n_bonds[a1] == self.max_nbonds or n_bonds[a2] == self.max_nbonds:
                 raise Exception(smiles)
-            #print(n_bonds[a1],n_bonds[a2])
+
             atom_graph[a1, n_bonds[a1]] = a2
             atom_graph[a2, n_bonds[a2]] = a1
             bond_graph[a1, n_bonds[a1]] = idx
@@ -314,29 +263,22 @@ class RxnGraphDataset(RxnDataset):
             n_bonds[a1] += 1
             n_bonds[a2] += 1
 
-        #bond_labels = get_bond_labels(edits, n_atoms, sparse_idx)
         binary_feats = self.get_binary_features(smiles)
-        #domain_features = mol_obj.get_attributes() #retunrs attributes from chemists
-        #domain_features_final=torch.cat((domain_atom_feats,domain_features),dim=0)
-        
+
         output["atom_feats"]=atom_feats
         output["bond_feats"]=bond_feats
         output["atom_graph"]=atom_graph
         output["bond_graph"]=bond_graph
         output["n_bonds"]=n_bonds
-        output["n_atoms"]=n_atoms#torch.tensor([n_atoms])
-        #output["bond_labels"][mol_idx]=bond_labels
+        output["n_atoms"]=n_atoms
         output["binary_feats"]=binary_feats
         output["sparse_idx"]=sparse_idx
-        #output["domain_feats"]=domain_features_final
-        
+        #output["domain_feats"]=domain_features_final        
         return output  
 
 
     
-    #def get_atom_features(self,mol_obj):
     def get_atom_features(self,mol):
-        #mol=Chem.MolFromSmiles(mol_obj.smile)
         atom_idx = torch.tensor([atom.GetIdx()-1 for atom in mol.GetAtoms()], dtype=torch.int64)
 
         symbols = [atom.GetSymbol() for atom in mol.GetAtoms()]
@@ -349,7 +291,6 @@ class RxnGraphDataset(RxnDataset):
         t_aromatic = torch.tensor([atom.GetIsAromatic() for atom in mol.GetAtoms()]).float().unsqueeze(1)
 
         general_feats=torch.cat((t_symbol, t_degree, t_expl_val, t_aromatic), dim=1)[atom_idx]
-        #domain_fetas=torch.cat((general_feats,torch.tensor([nmr_shifts,partial_charges])),dim=0)      
         return general_feats
 
     def get_bond_features(self,mol):
@@ -366,7 +307,7 @@ class RxnGraphDataset(RxnDataset):
         symbols = [atom.GetSymbol() for atom in rxn_mol.GetAtoms()]
         all_atoms=set(symbols)
         n_atoms=len(all_atoms)
-        #print(n_atoms)
+
         mapping=dict(zip( all_atoms, range(len(all_atoms))))
 
         for i, s in enumerate(smiles.split('.')):
@@ -431,26 +372,36 @@ class RxnGraphDataset(RxnDataset):
             bt == Chem.rdchem.BondType.AROMATIC, bond.GetIsConjugated(), bond.IsInRing()])
     
     
+    def get_atom_mapping_doyle(self,mol_dir):
     
-    def normalize(self,val,norm_vals):
-        max_val,min_val=norm_vals
+        smiles_mapping=defaultdict(dict) 
 
-        return abs((val-min_val) / (max_val- min_val ))
-    
-    def normalize_mol_attributes(self,mol_attributes):
-        weight, volume, surface_area,ovality,hardness,dipole_moment,electronegativity,HOMO,LUMO=mol_attributes.squeeze().tolist()
-        
-        weight = self.normalize(weight,self.weights)
-        volume = self.normalize(volume,self.vs)
-        surface_area = self.normalize(surface_area,self.surface_areas)
-        ovality = self.normalize(ovality,self.ovalities)
-        hardness = self.normalize(hardness,self.hardnesses)
-        dipole_moment = self.normalize(dipole_moment,self.dipole_moments)
-        electronegativity = self.normalize(electronegativity,self.electroes)
-        HOMO =  self.normalize(HOMO,self.HOMOs) 
-        LUMO = self.normalize(LUMO,self.LUMOs)
-        
-        return torch.tensor([weight, volume, surface_area,ovality,hardness,dipole_moment,electronegativity,HOMO,LUMO], dtype=torch.float).unsqueeze(0)
+        for mol_fn in glob.glob(mol_dir):
+            atoms , labels, atom_mapping =[], [], []
+            m = Chem.MolFromMolFile(mol_fn)
+            smiles=Chem.MolToSmiles(m)
+            mol_lines=open(mol_fn,'r').readlines()
+
+            for i,line in enumerate(mol_lines[4:]):
+                l=re.sub(' +', ' ', line.strip('\n'))
+                l2=l.split(' ')
+                if len(l2)==17:
+                    atom=l2[4]
+                    if atom !='' and '*' not in atom and 'H' not in atom:
+                        atoms.append(atom)
+                if "atom_labels" in line:
+                    labels=[i.strip('*') for i in mol_lines[i+1+4].strip('\n').split(' ') if ((i!='') and ('H' not in i))]
+            if len(atoms)==len(labels):
+                for i in range(len(atoms)):
+                    atom_mapping.append((atoms[i],labels[i]))            
+            else:
+                print('Atoms and lables don\'t match')
+                atom_mapping=[]
+            if smiles not in smiles_mapping:
+                smiles_mapping[mol_fn.split('/')[-1].split('.')[0]]=atom_mapping
+            else:
+                print("key exsists")
+        return smiles_mapping
 
 
     def get_atom_domain_features(self,mol_obj):
@@ -476,8 +427,6 @@ class RxnGraphDataset(RxnDataset):
         nmr_shifts = torch.tensor(nmr_shifts).float()
         partial_charges  = torch.tensor(partial_charges).float()
         
-        #nmr_shifts=torch.tensor([mol_obj.atoms[idx].get('nmr_shift',0) for idx in range(len(mol_obj.atoms))]).float()#.unsqueeze(1)
-        #partial_charges=torch.tensor([mol_obj.atoms[idx].get('partial_charge',0) for idx in range(len(mol_obj.atoms))]).float()#.unsqueeze(1)
         domain_feats=torch.cat((nmr_shifts,partial_charges),dim=0).float().unsqueeze(0)
         return domain_feats
 

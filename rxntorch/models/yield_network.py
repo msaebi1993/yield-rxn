@@ -25,11 +25,12 @@ class YieldNet(nn.Module):
         #def forward(self, fatoms, fbonds, atom_nb, bond_nb, num_nbs, n_atoms, binary_feats, mask_neis, mask_atoms, sparse_idx):
         local_features = self.wln(fatoms, fbonds, atom_nb, bond_nb, num_nbs, n_atoms, mask_neis, mask_atoms)
         #local_pair, global_pair = self.attention(local_features, binary_feats, sparse_idx)
-        d_local_features = self.dropout(local_features)
+        #d_local_features = self.dropout(local_features)
         global_features = self.attention(local_features, binary_feats, sparse_idx)
-        d_global_features= self.dropout(global_features)
+        #d_global_features= self.dropout(global_features)
         #yield_scores = self.yield_scoring(local_features, global_features, binary_feats, sparse_idx)
-        yield_scores = self.yield_scoring(d_local_features, d_global_features, binary_feats, sparse_idx, domain_feats)
+        #yield_scores = self.yield_scoring(d_local_features, d_global_features, binary_feats, sparse_idx, domain_feats)
+        yield_scores = self.yield_scoring(local_features, global_features, binary_feats, sparse_idx, domain_feats)
         #yield_scores = self.yield_scoring(local_features, 0, binary_feats, sparse_idx)
         
 
@@ -108,6 +109,8 @@ class YieldTrainer(nn.Module):
             
 
             criteria=nn.MSELoss()
+            #criteria=nn.SmoothL1Loss()
+            
             loss= criteria(yield_scores, data['yield_label'])
             loss = torch.mean(loss)
             avg_loss += loss.item()
@@ -133,7 +136,7 @@ class YieldTrainer(nn.Module):
                 loss.backward()
                 
                 param_norm = torch.sqrt(sum([torch.sum(param ** 2) for param in self.model.parameters()])).item()
-                grad_norm = torch.sqrt(sum([torch.sum(param.grad ** 2) for param in self.model.parameters()])).item()
+                grad_norm = torch.sqrt(sum([torch.sum(param.grad ** 2) for param in self.model.parameters() if param.grad is not None])).item()
                 sum_gnorm += grad_norm
                 if self.grad_clip is not None:
                     nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
@@ -181,7 +184,7 @@ class YieldTrainer(nn.Module):
                 logging.info("Learning rate changed to {:f}".format(self.optimizer.param_groups[0]['lr']))
             """   
         if valid:
-            self.lr_scheduler.step(avg_loss)
+            #self.lr_scheduler.step(avg_loss) for Su without doamin and everybody else
             logging.info("Epoch: {:2d}  valid Loss: {:f}  Valid R2: {:6.2%}  LR:{:8.8f}  ".format(epoch,test_loss, tmp_r2,learning_rate))
             return tmp_r2,avg_loss
         if train:
@@ -189,6 +192,7 @@ class YieldTrainer(nn.Module):
             #w1,w2=learned_weights[0][0].item(),learned_weights[0][0].item()
             return tmp_r2,avg_loss#,w1,w2
         if not train and not valid:
+            self.lr_scheduler.step(avg_loss)# for Su, with domain
             logging.info("Epoch: {:2d}  Loss: {:f}  R2: {:6.2%}  LR:{:8.8f}  ".format(epoch,test_loss, tmp_r2,learning_rate))
             return tmp_r2, test_loss
 
