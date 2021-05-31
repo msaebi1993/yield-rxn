@@ -60,6 +60,7 @@ If you're not using rdkit, you don't have to do feature selection because the fe
 python train_yield.py
 ```
 Arguments:
+```
 -c: Path to the dataset
 --train_split: train-test split ratio
 -o: Model name
@@ -71,7 +72,7 @@ Arguments:
 --use_domain: Use chemical features or not
 --batch_size: Size of mini-batch
 --dropout_rate: Droput rate
-
+```
 
 ## still working on these:
 6. To plot the training curves and get the avg perfroamnce, run:
