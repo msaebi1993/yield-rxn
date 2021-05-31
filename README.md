@@ -3,7 +3,7 @@
 
 ## Predicting Yield of Chemical Reactions using Deep Learning
 
-### Installation
+## Installation
 
 1. First install Anaconda. 
 2. Create a conda environment with
@@ -29,7 +29,7 @@ conda install scikit-learn
 
 Finally, clone this repository to your local machine.
 
-### Getting Started
+## Getting Started
 
 
 1. Run: 
@@ -74,7 +74,7 @@ Arguments:
 --dropout_rate: Droput rate
 ```
 
-## still working on these:
+## Still working on these:
 6. To plot the training curves and get the avg perfroamnce, run:
 ```
 04_plots.ipynb
