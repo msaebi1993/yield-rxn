@@ -42,7 +42,7 @@ Finally, clone this repository to your local machine.
 
 [Doyle data (dy)](http://shorturl.at/eBC59)
 
-[AstraZeneca data](http://shorturl.at/hiBH2)
+[AstraZeneca data (az)](http://shorturl.at/hiBH2)
 
 
 3. Prepare the domain features (chemical properties) by running 
