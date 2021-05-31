@@ -36,17 +36,24 @@ Finally, clone this repository to your local machine.
 ```
  pip install requirements
 ```
-2. Prepare the domain features (chemical properties) by running 
+2. Download the data from the below google drive links and put it in: ./data/<data_name>/raw/
+```
+Suzuki data (su): shorturl.at/qCQ16
+Doyle data (dy): shorturl.at/eBC59
+AstraZeneca data (az): shorturl.at/hiBH2
+```
+
+3. Prepare the domain features (chemical properties) by running 
 ```
 python 01_prepare_data.py --dataset_name <data_name> --use_rdkit_feats <1 or 0> --test_ratio <test_ratio>
 ```
-3. Depending on the type of the features you're using (with rdkit or no rdkit) you can do feature selection using:
+4. Depending on the type of the features you're using (with rdkit or no rdkit) you can do feature selection using:
 ```
 python 02_train_rf.py --dataset_name <data_name>
 ```
 If you're not using rdkit, you don't have to do feature selection because the feature set is not too large.
 
-3. To train the model, run:
+5. To train the model, run:
 ```
 python train_yield.py
 ```
@@ -65,11 +72,11 @@ Arguments:
 
 
 ## still working on these:
-4. To plot the training curves and get the avg perfroamnce, run:
+6. To plot the training curves and get the avg perfroamnce, run:
 ```
 04_plots.ipynb
 ```
-5. To visualize the activations of the GNN, run:
+7. To visualize the activations of the GNN, run:
 ```
 05_load_model.ipynb
 ```
@@ -77,3 +84,4 @@ Arguments:
 
 
 If using chemical features (domain features) you need the json file containg the features. Otherwise, you can just use smiles strings.
+
