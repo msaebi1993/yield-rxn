@@ -1,8 +1,4 @@
-# yield-rxn
-
-
-## Predicting Yield of Chemical Reactions using Deep Learning
-
+Code for the paper: [Graph Neural Networks for Predicting Chemical Reaction Performance](https://chemrxiv.org/articles/preprint/Graph_Neural_Networks_for_Predicting_Chemical_Reaction_Performance/14589498)
 ## Installation
 
 1. First install Anaconda. 
