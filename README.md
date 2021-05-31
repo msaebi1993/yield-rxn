@@ -39,7 +39,9 @@ Finally, clone this repository to your local machine.
 2. Download the data from the below google drive links and put it in: ./data/<data_name>/raw/
 
 [Suzuki data (su)](http://shorturl.at/qCQ16)
+
 [Doyle data (dy)](http://shorturl.at/eBC59)
+
 [AstraZeneca data](http://shorturl.at/hiBH2)
 
 
