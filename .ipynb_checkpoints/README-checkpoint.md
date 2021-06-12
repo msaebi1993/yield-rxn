@@ -77,8 +77,11 @@ Important arguments:
 ```
 05_load_model.ipynb
 ```
+If using chemical features (domain features) you need the json file containg the features. Otherwise, you can just use smiles strings.
 
-## Still working on these:
+
+
+### Not super cleaned yet, but this just generates some plots:
 6. To plot the training curves and get the avg perfroamnce, run:
 ```
 04_plots.ipynb
@@ -86,5 +89,4 @@ Important arguments:
 
 
 
-If using chemical features (domain features) you need the json file containg the features. Otherwise, you can just use smiles strings.
 
