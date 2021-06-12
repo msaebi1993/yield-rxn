@@ -107,7 +107,7 @@ model_name = '-'.join(map(str,[args.output_name, gc, args.use_domain, Abs, 'set'
 
 output_path= os.path.join(args.output_path ,model_name)
 if not os.path.exists(output_path):
-    os.mkdir(output_path)
+    os.makedirs(output_path)
 
 logfile = '.'.join((args.output_name, "log"))
 logpath = os.path.join(output_path, logfile)
