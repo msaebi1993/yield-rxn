@@ -73,7 +73,7 @@ Important arguments:
 --batch_size: Size of mini-batch
 --dropout_rate: Droput rate
 ```
-7. To generate model predictions and visualize the activations of the GNN, run:
+6. To generate model predictions and visualize the activations of the GNN, run:
 ```
 05_load_model.ipynb
 ```
@@ -82,7 +82,7 @@ If using chemical features (domain features) you need the json file containg the
 
 
 ### Not super cleaned yet, but this just generates some plots:
-6. To plot the training curves and get the avg perfroamnce, run:
+7. To plot the training curves and get the avg perfroamnce, run:
 ```
 04_plots.ipynb
 ```
