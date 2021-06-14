@@ -86,7 +86,8 @@ parser.add_argument("-dn", "--dataset_name", type=str, default="dy",required=Tru
 parser.add_argument("-dp","--dataset_path", type=str, default='./data/', help="dataset name")
 parser.add_argument("-rdkit", "--use_rdkit_feats", required=True, type=str, help="Use rdkit discriptors or not. Options: rdkit, no_rdkit")
 parser.add_argument("-tr", "--test_ratio", type=float, required=True, default=0.3, help="test ratio for split")
-parser.add_argument("-rs", "--random_state",  type=float, default=0, help="Random state for RF model")
+parser.add_argument("-rs", "--random_state",  type=float, default=0, help="Random state for generating data splits")
+
 
 args = parser.parse_args()
 
