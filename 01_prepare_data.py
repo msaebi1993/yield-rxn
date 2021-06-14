@@ -285,7 +285,7 @@ df.to_csv(output_file)
 
 #creating 10 random data splits -shuffled
 print(f"\nWriting the train/test split indexs\n")
-rs = ShuffleSplit(n_splits=10, test_size=args.test_ratio, random_state= args.random_state)
+rs = ShuffleSplit(n_splits=10, test_size=args.test_ratio, random_state= int(args.random_state))
 idx_dict= {'train_idx':{},'test_idx':{}}
 i=1
 for train_index, test_index in rs.split(df):
