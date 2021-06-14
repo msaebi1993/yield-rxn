@@ -145,6 +145,7 @@ class YieldTrainer(nn.Module):
             return tmp_r2,avg_loss
         
         if train:
+            self.lr_scheduler.step(avg_loss)# for Su, with domain
             logging.info("Epoch: {:2d}  train Loss: {:f}  train R2: {:6.2%}  LR:{:8.8f} param norm: {:8.4f}  grad norm: {:8.4f} ".format(epoch,test_loss, tmp_r2,learning_rate,param_norm, sum_gnorm))
             
             learned_weights=self.model.module.yield_scoring.finalscore.weight.data
@@ -153,7 +154,7 @@ class YieldTrainer(nn.Module):
             return tmp_r2,avg_loss,w1,w2
         
         if not train and not valid:
-            self.lr_scheduler.step(avg_loss)# for Su, with domain
+            
             logging.info("Epoch: {:2d}  Test Loss: {:f}  Test R2: {:6.2%}  Test LR:{:8.8f}  ".format(epoch,test_loss, tmp_r2,learning_rate))
             return tmp_r2, test_loss
 
