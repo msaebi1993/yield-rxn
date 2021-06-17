@@ -42,7 +42,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-p", "--dataset_path", type=str, default='./data/', help="train dataset")
 parser.add_argument("-dn", "--dataset_name", required=True, type=str, help="dataset name. Options: az (AstraZeneca),dy (Doyle),su (Suzuki)")
 parser.add_argument("-op", "--output_path", type=str, default='./output/', help="saved model path")
-parser.add_argument("-o", "--output_name", required=True, type=str, help="e.g. rxntorch.model")
+parser.add_argument("-mv", "--model_version", type=str, default='5.3.1-learn-w', help="Choose the model version")
 parser.add_argument("-sn", "--split_set_num", type=int, default=1, help="Choose one split set for train and test. Options: 1-10")
 
 parser.add_argument("-dr", "--dropout_rate", type=float, default=0.04, help="Ratio of samples to reserve for valid data")
@@ -72,7 +72,7 @@ parser.add_argument("--seed", type=int, default=0, help="random seed")
 parser.add_argument("-ud","--use_domain", type=str, required=True, help="use domain features or not. options: rdkit: combination od rdkit feature and bozhao features. no_rdkit: only bozhao features. no_domain: neither.")
 parser.add_argument("-mb","--max_nbonds", type=int, default=15, help="maximum number of bonds for binary features")
 parser.add_argument("-ma","--max_natoms", type=int, default=15, help="maximum number of atoms for binary features")
-parser.add_argument("--abs", type=str, default='abs', help="Take the average over aboslute/no absolute/sigmoid/relu value of predicted yield")
+
 
 
 
@@ -101,16 +101,27 @@ selected_features_fn = os.path.join(data_path,'rf_results','selected_feats.txt')
 #output specs
 # Saves model scores and the model itself in output_path
 gc= 'gc' if args.grad_clip else ''
-Abs=args.abs 
+Abs='abs'
 
-model_name = '-'.join(map(str,[args.output_name, gc, args.use_domain, Abs, 'set',args.split_set_num, args.hidden, args.layers, args.epochs, args.lr, args.lr_decay, args.lr_steps,args.batch_size]))
+#model_name = '-'.join(map(str,[args.output_name, gc, args.use_domain, Abs, 'set',args.split_set_num, args.hidden, args.layers, args.epochs, args.lr, args.lr_decay, args.lr_steps,args.batch_size]))
 
-output_path= os.path.join(args.output_path ,model_name)
+#output_path= os.path.join(args.output_path ,model_name)
+model_dir=  os.path.join('output',args.model_version)
+output_name= data_type+'_'+args.model_version
+
+model_name = '-'.join(map(str,[output_name, gc, args.use_domain, Abs, 'set',args.split_set_num,
+                               args.hidden, args.layers, args.epochs, args.lr, args.lr_decay, 
+                               args.lr_steps,args.batch_size]))
+
+output_path= os.path.join(model_dir,model_name)
 if not os.path.exists(output_path):
-    os.makedirs(output_path)
+    os.mkdir(output_path)
+#else:
+    #logging.info(f"Model path created at : {output_path}")
 
-logfile = '.'.join((args.output_name, "log"))
-logpath = os.path.join(output_path, logfile)
+
+logfile = '.'.join((output_name, "log"))
+logpath = os.path.join(output_path, "logfile")
 logging.basicConfig(level=logging.INFO, style='{', format="{asctime:s}: {message:s}",
                     datefmt="%m/%d/%y %H:%M:%S", handlers=(
                     logging.FileHandler(logpath), logging.StreamHandler()))
@@ -203,7 +214,7 @@ logging.info("Graph convolution layers: {}  Hidden size: {}".format(
 ################################################################
 
 net = YieldNet(depth=args.layers, dropout= args.dropout_rate, afeats_size=afeats_size, bfeats_size=bfeats_size,
-             hidden_size=args.hidden, binary_size=binary_size,dmfeats_size=dmfeats_size, max_nbonds=args.max_nbonds,use_domain=args.use_domain, abs_score=args.abs)
+             hidden_size=args.hidden, binary_size=binary_size,dmfeats_size=dmfeats_size, max_nbonds=args.max_nbonds,use_domain=args.use_domain, abs_score=Abs)
 logging.info("Total Parameters: {:,d}".format(sum([p.nelement() for p in net.parameters()])))
 
 logging.info("{:-^80}".format("Trainer"))
@@ -252,7 +263,7 @@ for epoch in range(args.epochs):
     w2_fn.write(str(float(w2))+',')
         
     if r2_test>max_score:
-        trainer.save(epoch, model_name, args.output_path)
+        trainer.save(epoch, model_name, model_dir)
         max_score=r2_test
     
                 
