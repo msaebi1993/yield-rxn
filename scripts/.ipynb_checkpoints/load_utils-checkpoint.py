@@ -94,17 +94,18 @@ def get_model_outputs(model,dataloader,data_smiles):
             data_dict[rxn_id]['pred_yield'] = predicted
             data_dict[rxn_id]['weights'] = gnn_weights
             
-        
-    print("R2 score: ",r2_score(correct_yields,pred_yields)) 
+    r2score=r2_score(correct_yields,pred_yields)    
     
-    return correct_yields,pred_yields,data_dict
+    
+    return correct_yields,pred_yields,data_dict,r2score
 
 ###########################################
 #Generate basic stats for predictions
 ###########################################
 
-def get_basic_stats(data_dict):
+def get_basic_stats(data_dict,model_res,r2score, train_test ):
     "\nGenerating basic stats!"
+    output_file = os.path.join(model_res,'summary.txt')
     low_low=0;low_high= 0
     high_low=0;high_high=0
 
@@ -123,16 +124,48 @@ def get_basic_stats(data_dict):
 
     lows= low_low+low_high
     highs = high_low+high_high
-    print("Num low-yield: ", lows)
-    print("Num high-yield: ", highs)
-
+    
+    with open(output_file,'a') as g:
+        g.write(f"{train_test} set\n")
+        g.write(f"R2 score: {r2score}")
+        g.write(f"Num low-yield: {lows}\n")
+        g.write(f"Num high-yield: {highs}\n")
+        g.write("Percentage of lows --> high: {:.2%}\n".format(low_high/lows,2))
+        g.write("Percentage of lows --> low: {:.2%}\n".format(low_low/lows,2))
+        g.write("Percentage of highs --> high: {:.2%}\n".format(high_high/highs,2))
+        g.write("Percentage of highs --> low: {:.2%}\n\n\n".format(high_low/highs,2))
+    g.close()    
+    
+    print(f"{train_test} set")
+    print(f"R2 score: {r2score}")
+    print(f"Num low-yield: {lows}")
+    print(f"Num high-yield: {highs}")
+    
     print("Percentage of lows --> high: {:.2%}".format(low_high/lows,2))
     print("Percentage of lows --> low: {:.2%}".format(low_low/lows,2))
     print("Percentage of highs --> high: {:.2%}".format(high_high/highs,2))
     print("Percentage of highs --> low: {:.2%}".format(high_low/highs,2))
     
+###########################################
+#get feature activation
+###########################################
+
     
+def get_domain_weights(domain_weights,domain_feature_names, model_res ):
+    feat_names_weights= []
+    output_file = os.path.join(model_res,'domain_weights.txt')
     
+    for i in range(len(domain_feature_names)):
+        feat_names_weights.append((domain_weights[0,i].item(),domain_feature_names[i]))
+    sorted_feat_names_weights= sorted(feat_names_weights, key=lambda x: abs(x[0]),reverse=True)
+    
+    with open(output_file,'w') as g:
+        for w,feat in sorted_feat_names_weights:
+            g.write('\t'.join(map(str,[feat,round(w,3)]))+'\n')
+    g.close()
+    print(f"Domain weights written to {output_file}")
+    return sorted_feat_names_weights    
+
 ###########################################
 #plot activations
 ###########################################
@@ -151,7 +184,7 @@ def plot_activation_all_data(data_dict,train_test,model_res):
         mol = Chem.MolFromSmiles(smiles)
         bond_map = get_bond_map(mol)
         plot_activations(rxn_id,weights,mol,bond_map,y,pred ,model_res,good_bad)
-        
+    print('Done!')
         
 def plot_activations(sample_num,gnn_weights,mol,bond_map,actual,predicted,model_res,good_bad):
     
@@ -233,3 +266,4 @@ def write_model_preds(model_preds_fn,data_dict):
             f.write(','.join(map(str,[rxn_id,res['yield'],res['pred_yield'],res['smiles']])) +'\n')
         
     f.close()    
+    print('Done!')
