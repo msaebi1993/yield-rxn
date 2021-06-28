@@ -20,9 +20,7 @@ class Attention(nn.Module):
         d1, d2, d3, d4 = local_features.shape
         l1, l2, l3, l4 = binary_features.shape
         
-        #padded_binary_feats= torch.zeros(d1, d2, d3, d4)
-        #padded_binary_feats[:, :l2, :l3, :]=self.fcbinary(binary_feats)
-        #padded_binary_feats = padded_binary_feats.to(self.device)
+
         padded_binary_feats = F.pad(input=binary_features, pad=(0,0 , 0,d3-l3, 0,d2-l2), mode='constant', value=0)
         
         attention_features = F.relu( local_features+ padded_binary_feats)
@@ -30,9 +28,5 @@ class Attention(nn.Module):
         
         attention_score = torch.sigmoid(self.fcattention(attention_features))
         global_feats = torch.sum(local_feats.unsqueeze(1) * attention_score, dim=2)
-        #global_pair1 = global_feats[sparse_idx[:,0],sparse_idx[:,1]]
-        #global_pair2 = global_feats[sparse_idx[:,0],sparse_idx[:,2]]
-        #global_pair = global_pair1 + global_pair2
-        #local_pair = local_pair[sparse_idx[:,0],sparse_idx[:,1],sparse_idx[:,2]]
-        #return local_pair, global_pair
+
         return global_feats 

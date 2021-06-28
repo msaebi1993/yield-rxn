@@ -87,7 +87,7 @@ def get_model_outputs(model,dataloader,data_smiles):
             correct_yields.append(yield_label)
             pred_yields.append(predicted)
 
-            gnn_weights= save_output.outputs[11].detach().to('cpu').squeeze(0).squeeze(2).numpy()
+            gnn_weights= save_output.outputs[9].detach().to('cpu').squeeze(0).squeeze(2).numpy()
 
             data_dict[rxn_id]['smiles'] = rxn_smiles 
             data_dict[rxn_id]['yield'] = yield_label
@@ -127,7 +127,7 @@ def get_basic_stats(data_dict,model_res,r2score, train_test ):
     
     with open(output_file,'a') as g:
         g.write(f"{train_test} set\n")
-        g.write(f"R2 score: {r2score}")
+        g.write(f"R2 score: {r2score}\n")
         g.write(f"Num low-yield: {lows}\n")
         g.write(f"Num high-yield: {highs}\n")
         g.write("Percentage of lows --> high: {:.2%}\n".format(low_high/lows,2))

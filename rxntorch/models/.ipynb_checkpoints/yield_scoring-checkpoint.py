@@ -41,7 +41,7 @@ class YieldScoring(nn.Module):
 
             score_g_avg=torch.mean(torch.abs(score_g),dim=1)
             score_d_avg=torch.abs(score_d)
-            
+            #final_score=(score_d_avg+score_g_avg)/2
             final_score=self.finalscore(torch.cat([score_d_avg,score_g_avg],dim=1))
             return final_score
         else:

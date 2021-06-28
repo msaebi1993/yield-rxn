@@ -72,7 +72,7 @@ parser.add_argument("--seed", type=int, default=0, help="random seed")
 parser.add_argument("-ud","--use_domain", type=str, required=True, help="use domain features or not. options: rdkit: combination od rdkit feature and bozhao features. no_rdkit: only bozhao features. no_domain: neither.")
 parser.add_argument("-mb","--max_nbonds", type=int, default=15, help="maximum number of bonds for binary features")
 parser.add_argument("-ma","--max_natoms", type=int, default=15, help="maximum number of atoms for binary features")
-
+parser.add_argument("--abs", type=str, default='abs', help="Take the average over aboslute/no absolute/sigmoid/relu value of predicted yield")
 
 
 
@@ -91,17 +91,17 @@ data_type=args.dataset_name
 #set domain features to 0.
 ext= '_'+args.use_domain if 'rdkit' in args.use_domain else '_no_rdkit' 
 data_path = os.path.join(args.dataset_path,data_type)
-processed_path = os.path.join(data_path,'processed')
+processed_path = os.path.join(data_path,'processed_12')
 
 input_split_idx_file = os.path.join(processed_path,'train_test_idxs.pickle')
 processed_data_file = os.path.join(processed_path,''.join([data_type, ext,'.csv']))
-selected_features_fn = os.path.join(data_path,'rf_results','selected_feats.txt')
+selected_features_fn = os.path.join(data_path,'processed_12','rf_results','selected_feats.txt')
 
 
 #output specs
 # Saves model scores and the model itself in output_path
 gc= 'gc' if args.grad_clip else ''
-Abs='abs'
+Abs=args.abs 
 
 #model_name = '-'.join(map(str,[args.output_name, gc, args.use_domain, Abs, 'set',args.split_set_num, args.hidden, args.layers, args.epochs, args.lr, args.lr_decay, args.lr_steps,args.batch_size]))
 
@@ -214,7 +214,7 @@ logging.info("Graph convolution layers: {}  Hidden size: {}".format(
 ################################################################
 
 net = YieldNet(depth=args.layers, dropout= args.dropout_rate, afeats_size=afeats_size, bfeats_size=bfeats_size,
-             hidden_size=args.hidden, binary_size=binary_size,dmfeats_size=dmfeats_size, max_nbonds=args.max_nbonds,use_domain=args.use_domain, abs_score=Abs)
+             hidden_size=args.hidden, binary_size=binary_size,dmfeats_size=dmfeats_size, max_nbonds=args.max_nbonds,use_domain=args.use_domain, abs_score=args.abs)
 logging.info("Total Parameters: {:,d}".format(sum([p.nelement() for p in net.parameters()])))
 
 logging.info("{:-^80}".format("Trainer"))
@@ -234,10 +234,14 @@ trainer = YieldTrainer(net, lr=args.lr, betas=(args.adam_beta1, args.adam_beta2)
 ################################################################
 
 train_r2 = open(output_path+'/train_scores.txt', 'a')
-train_l = open(output_path+'/train_loss.txt', 'a')
+train_l = open(output_path+'/train_rmse.txt', 'a')
+train_e = open(output_path+'/train_mae.txt', 'a')
+
 
 test_r2 = open(output_path+'/test_scores.txt', 'a')
-test_l = open(output_path+'/test_loss.txt', 'a')
+test_l = open(output_path+'/test_rmse.txt', 'a')
+test_e = open(output_path+'/test_mae.txt', 'a')
+
 
 #valid_r2 = open(output_path+'valid_scores.txt', 'a')
 #valid_l = open(output_path+'valid_loss.txt', 'a')
@@ -248,8 +252,8 @@ w2_fn = open(output_path+'/weights_2.txt', 'a')
 
 max_score=0
 for epoch in range(args.epochs):
-    r2_train, train_loss,w1,w2 = trainer.train_epoch(epoch, train_dataloader)
-    r2_test ,test_loss = trainer.test_epoch(epoch, test_dataloader)
+    r2_train, train_loss,train_mae, w1,w2 = trainer.train_epoch(epoch, train_dataloader)
+    r2_test ,test_loss,test_mae = trainer.test_epoch(epoch, test_dataloader)
     #r2_valid ,valid_loss = trainer.valid_epoch(epoch, valid_dataloader)
     
     train_r2.write(str(float(r2_train))+',')
@@ -258,6 +262,9 @@ for epoch in range(args.epochs):
     
     train_l.write(str(float(train_loss))+',')
     test_l.write(str(float(test_loss))+',')
+    
+    train_e.write(str(float(train_mae))+',')
+    test_e.write(str(float(test_mae))+',')
 
     w1_fn.write(str(float(w1))+',')
     w2_fn.write(str(float(w2))+',')
@@ -269,4 +276,5 @@ for epoch in range(args.epochs):
                 
 train_r2.close();test_r2.close();#valid_r2.close()
 train_l.close();test_l.close();#valid_l.close()
+train_e.close();test_e.close();#valid_l.close()
 w1_fn.close();w2_fn.close()

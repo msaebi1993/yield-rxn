@@ -10,6 +10,8 @@ from .wln import WLNet
 from .attention import Attention
 from .yield_scoring import YieldScoring
 from sklearn.metrics import roc_auc_score,r2_score
+from sklearn.metrics import mean_squared_error as s_mse
+from sklearn.metrics import mean_absolute_error as s_mae
 
 class YieldNet(nn.Module):
     def __init__(self, depth, dropout, afeats_size, bfeats_size, hidden_size, binary_size,dmfeats_size,max_nbonds,use_domain,abs_score):
@@ -57,22 +59,22 @@ class YieldTrainer(nn.Module):
         logging.info(80*"*"+'\n')
         logging.info("{:-^80}".format("Training"))
         self.model.train()
-        r2 ,loss,w1,w2= self.iterate(epoch, data_loader, train=True,valid=False)
-        return r2,loss,w1,w2
+        r2 ,rmse,mae, w1,w2= self.iterate(epoch, data_loader, train=True,valid=False)
+        return r2,rmse,mae,w1,w2
 
     def test_epoch(self, epoch, data_loader):
         logging.info("{:-^80}".format("Testing"))
         with torch.no_grad():
             self.model.eval()
-            r2 ,loss= self.iterate(epoch, data_loader, train=False,valid=False)
-        return r2,loss
+            r2 ,rmse,mae= self.iterate(epoch, data_loader, train=False,valid=False)
+        return r2,rmse,mae
 
     def valid_epoch(self, epoch, data_loader):
         logging.info("{:-^80}".format("Validating"))
         with torch.no_grad():
             self.model.eval()
-        r2 ,loss= self.iterate(epoch, data_loader, train=False,valid=True)
-        return r2,loss
+        r2 ,rmse,mae= self.iterate(epoch, data_loader, train=False,valid=True)
+        return r2,rmse,mae
 
 
     def iterate(self, epoch, data_loader, train=True,valid=False):
@@ -82,8 +84,12 @@ class YieldTrainer(nn.Module):
         iters = len(data_loader)
         n_samples = len(data_loader.dataset)
         r2=0
-        correct_yields=np.array([[0]])
-        pred_yields=np.array([[0]])
+        #correct_yields=np.array([[0]])
+        #pred_yields=np.array([[0]])
+        correct_yields=[]
+        pred_yields=[]
+
+
         cum_r2=0
         for i, data in enumerate(data_loader):
             data = {key: value.to(self.device, non_blocking=True) for key, value in data.items()}
@@ -109,17 +115,19 @@ class YieldTrainer(nn.Module):
 
             aa=data['yield_label'].cpu().detach().numpy()
             bb=yield_scores.cpu().detach().numpy()
-            correct_yields=np.append(correct_yields,aa,0)
-            pred_yields=np.append(pred_yields,bb,0)
+            #correct_yields=np.append(correct_yields,aa,0)
+            #pred_yields=np.append(pred_yields,bb,0)
+            correct_yields.append(aa)
+            pred_yields.append(bb)
                 
-            if aa.shape !=bb.shape or correct_yields.shape != pred_yields.shape:
+            if aa.shape !=bb.shape or len(correct_yields)!= len(pred_yields):
                 raise ValueError("Found input variables with inconsistent numbers of elements")
                 
-            tmp_r2 = r2_score(correct_yields,pred_yields)
-            cum_r2 += r2_score(aa,bb)
+            #tmp_r2 = r2_score(correct_yields,pred_yields)
+            #cum_r2 += r2_score(aa,bb)
                 
-            tmp_r2=0 if math.isnan(tmp_r2) else tmp_r2
-            cum_r2=0 if math.isnan(cum_r2) else cum_r2
+            #tmp_r2=0 if math.isnan(tmp_r2) else tmp_r2
+            #cum_r2=0 if math.isnan(cum_r2) else cum_r2
             
             learning_rate=np.mean([ group['lr'] for group in self.optimizer.param_groups ])
             if train:
@@ -139,31 +147,42 @@ class YieldTrainer(nn.Module):
                     
                 avg_loss = 0.0
                 sum_gnorm = 0.0
-  
+        
+        y_actual, y_pred = np.concatenate(np.array(correct_yields)).squeeze(1), np.concatenate(np.array(pred_yields)).squeeze(1)
+        logging.info(f"y_actual, y_pred shape: {y_actual.shape},{y_pred.shape}")
+        rmse= np.sqrt(s_mse(y_actual, y_pred ))
+        mae= s_mae(y_actual, y_pred )
+        final_r2 = r2_score(y_actual, y_pred )
+        
         if valid:
-            logging.info("Epoch: {:2d}  valid Loss: {:f}  valid R2: {:6.2%}  LR:{:8.8f}  ".format(epoch,test_loss, tmp_r2,learning_rate))
-            return tmp_r2,avg_loss
+            #logging.info("Epoch: {:2d}  valid Loss: {:f}  valid R2: {:6.2%}  LR:{:8.8f}  ".format(epoch,test_loss, tmp_r2,learning_rate))
+            logging.info("Epoch: {:2d}  valid RMSE: {:f}  valid R2: {:6.2%}  valid MAE: {:6.2%}  LR:{:8.8f}  ".format(epoch,rmse,final_r2, mae, learning_rate))
+            #return tmp_r2,avg_loss
+            return final_r2,rmse,mae#,w1,w2
         
         if train:
+            
             self.lr_scheduler.step(avg_loss)# for Su, with domain
-            logging.info("Epoch: {:2d}  train Loss: {:f}  train R2: {:6.2%}  LR:{:8.8f} param norm: {:8.4f}  grad norm: {:8.4f} ".format(epoch,test_loss, tmp_r2,learning_rate,param_norm, sum_gnorm))
+            logging.info("Epoch: {:2d}  train RMSE: {:f}  train R2: {:6.2%}  train MAE: {:6.2%}  LR:{:8.8f} param norm: {:8.4f}  grad norm: {:8.4f} ".format(epoch,rmse, final_r2,mae, learning_rate,param_norm, sum_gnorm))
             
             learned_weights=self.model.module.yield_scoring.finalscore.weight.data
             w1,w2=learned_weights[0][0].item(),learned_weights[0][1].item()
             #w1,w2=0,0
-            return tmp_r2,avg_loss,w1,w2
+            #return tmp_r2,avg_loss,w1,w2
+            return final_r2,rmse,mae,w1,w2
         
         if not train and not valid:
             
-            logging.info("Epoch: {:2d}  Test Loss: {:f}  Test R2: {:6.2%}  Test LR:{:8.8f}  ".format(epoch,test_loss, tmp_r2,learning_rate))
-            return tmp_r2, test_loss
+            logging.info("Epoch: {:2d}  Test RMSE: {:f}  Test R2: {:6.2%}  test MAE: {:6.2%}  Test LR:{:8.8f}  ".format(epoch,rmse, final_r2,mae,learning_rate))
+            #return tmp_r2, test_loss
+            return final_r2,rmse,mae#,w1,w2
 
         
 
         
             
     def save(self, epoch, filename, path):
-        output_path=path + filename +'/yield.model'
+        output_path=os.path.join(path ,filename ,'yield.model')
         torch.save(self.model.module.cpu(), output_path)
         self.model.to(self.device)
         logging.info("Model saved to {}:".format(output_path))

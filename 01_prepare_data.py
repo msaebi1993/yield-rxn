@@ -86,8 +86,7 @@ parser.add_argument("-dn", "--dataset_name", type=str, default="dy",required=Tru
 parser.add_argument("-dp","--dataset_path", type=str, default='./data/', help="dataset name")
 parser.add_argument("-rdkit", "--use_rdkit_feats", required=True, type=str, help="Use rdkit discriptors or not. Options: rdkit, no_rdkit")
 parser.add_argument("-tr", "--test_ratio", type=float, required=True, default=0.3, help="test ratio for split")
-parser.add_argument("-rs", "--random_state",  type=float, default=0, help="Random state for generating data splits")
-
+parser.add_argument("-rs", "--random_state",  type=int, default=0, help="Random state for generating data splits")
 
 args = parser.parse_args()
 
@@ -100,10 +99,11 @@ use_rdkit_features= args.use_rdkit_feats
 input_data_path = os.path.join(args.dataset_path,data_type,'raw',input_data)
 
 ext = '_'+use_rdkit_features 
+processed = 'processed-'+str(args.random_state)
 output_fn= ''.join([data_type,ext ,'.csv'])
-output_path= os.path.join(args.dataset_path,data_type,'processed')
+output_path= os.path.join(args.dataset_path,data_type, processed)
 if not os.path.exists(output_path):
-    os.mkdir(output_path)
+    os.makedirs(output_path)
 output_file= os.path.join(output_path,output_fn)
 train_test_idx_file= os.path.join(output_path,'train_test_idxs.pickle')
 
