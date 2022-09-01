@@ -70,8 +70,8 @@ parser.add_argument("--cuda_devices", type=int, nargs='*', default=None, help="C
 parser.add_argument("--log_freq", type=int, default=100, help="printing loss every n iter: setting n")
 parser.add_argument("--seed", type=int, default=0, help="random seed")
 parser.add_argument("-ud","--use_domain", type=str, required=True, help="use domain features or not. options: rdkit: combination od rdkit feature and bozhao features. no_rdkit: only bozhao features. no_domain: neither.")
-parser.add_argument("-mb","--max_nbonds", type=int, default=15, help="maximum number of bonds for binary features")
-parser.add_argument("-ma","--max_natoms", type=int, default=15, help="maximum number of atoms for binary features")
+parser.add_argument("-mb","--max_nbonds", type=int, default=7, help="maximum number of bonds for binary features")
+parser.add_argument("-ma","--max_natoms", type=int, default=100, help="maximum number of atoms for binary features")
 parser.add_argument("--abs", type=str, default='abs', help="Take the average over aboslute/no absolute/sigmoid/relu value of predicted yield")
 
 
@@ -91,11 +91,11 @@ data_type=args.dataset_name
 #set domain features to 0.
 ext= '_'+args.use_domain if 'rdkit' in args.use_domain else '_no_rdkit' 
 data_path = os.path.join(args.dataset_path,data_type)
-processed_path = os.path.join(data_path,'processed_12')
+processed_path = os.path.join(data_path,'processed-0')
 
 input_split_idx_file = os.path.join(processed_path,'train_test_idxs.pickle')
 processed_data_file = os.path.join(processed_path,''.join([data_type, ext,'.csv']))
-selected_features_fn = os.path.join(data_path,'processed_12','rf_results','selected_feats.txt')
+selected_features_fn = os.path.join(data_path,'processed-0','rf_results','selected_feats.txt')
 
 
 #output specs
@@ -214,7 +214,7 @@ logging.info("Graph convolution layers: {}  Hidden size: {}".format(
 ################################################################
 
 net = YieldNet(depth=args.layers, dropout= args.dropout_rate, afeats_size=afeats_size, bfeats_size=bfeats_size,
-             hidden_size=args.hidden, binary_size=binary_size,dmfeats_size=dmfeats_size, max_nbonds=args.max_nbonds,use_domain=args.use_domain, abs_score=args.abs)
+             hidden_size=args.hidden, binary_size=binary_size,dmfeats_size=dmfeats_size, max_nbonds=args.max_nbonds,use_domain=args.use_domain, abs_score=args.abs,max_natoms=args.max_natoms)
 logging.info("Total Parameters: {:,d}".format(sum([p.nelement() for p in net.parameters()])))
 
 logging.info("{:-^80}".format("Trainer"))

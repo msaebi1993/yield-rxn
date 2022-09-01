@@ -5,10 +5,10 @@ from .layers import Linear
 
 
 class Attention(nn.Module):
-    def __init__(self, hidden_size, binary_size, max_nbonds):
+    def __init__(self, hidden_size, binary_size, max_nbonds, max_natoms):
         super(Attention, self).__init__()
         self.fcapair = Linear(hidden_size, hidden_size, bias=False)
-        self.fcbinary = Linear(int(binary_size/max_nbonds), hidden_size)
+        self.fcbinary = Linear(int(max_natoms), hidden_size)
         self.fcattention = Linear(hidden_size, 1)
         cuda_condition= True
         self.device = torch.device("cuda" if cuda_condition else "cpu")

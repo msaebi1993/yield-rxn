@@ -14,12 +14,11 @@ from sklearn.metrics import mean_squared_error as s_mse
 from sklearn.metrics import mean_absolute_error as s_mae
 
 class YieldNet(nn.Module):
-    def __init__(self, depth, dropout, afeats_size, bfeats_size, hidden_size, binary_size,dmfeats_size,max_nbonds,use_domain,abs_score):
+    def __init__(self, depth, dropout, afeats_size, bfeats_size, hidden_size, binary_size,dmfeats_size,max_nbonds,use_domain,abs_score,max_natoms):
         super(YieldNet, self).__init__()
         self.hidden_size = hidden_size
         self.wln = WLNet(depth, dropout, afeats_size, bfeats_size, hidden_size)
-        
-        self.attention = Attention(hidden_size, binary_size, max_nbonds)
+        self.attention = Attention(hidden_size, binary_size, max_nbonds,max_natoms)
         self.yield_scoring= YieldScoring(hidden_size, binary_size, dmfeats_size, use_domain,abs_score)
         self.dropout = nn.Dropout(dropout)
 
@@ -35,7 +34,7 @@ class YieldNet(nn.Module):
 class YieldTrainer(nn.Module):
     def __init__(self, rxn_net, lr=1e-4, betas=(0.9, 0.999), weight_decay=0.0, with_cuda=True,
                  cuda_devices=None, log_freq=10, grad_clip=None, pos_weight=1.0, lr_decay=0.9,
-                 lr_steps=10000, max_nbonds=15):
+                 lr_steps=10000, max_nbonds=10):
         super(YieldTrainer, self).__init__()
         cuda_condition = torch.cuda.is_available() and with_cuda
         self.device = torch.device("cuda" if cuda_condition else "cpu")

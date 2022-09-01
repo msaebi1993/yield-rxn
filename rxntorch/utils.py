@@ -13,10 +13,12 @@ def collate_fn(batch_data):
     output = {}
     for key in batch_data[0].keys():
         if key == "binary_feats":
+            
             to_stack = [sample[key] for sample in batch_data]
-            n_atoms = [label.shape[0] for label in to_stack]
+            n_atoms = [label.shape[1] for label in to_stack]
             max_atoms = max(n_atoms)
-            values = torch.zeros((len(to_stack), max_atoms, max_atoms, to_stack[0].shape[-1]))
+            values = torch.zeros((len(to_stack), to_stack[0].shape[0], max_atoms, max_atoms))
+
             for i, (label, n_atom) in enumerate(zip(to_stack, n_atoms)):
                 values[i,:n_atom,:n_atom] = label
   

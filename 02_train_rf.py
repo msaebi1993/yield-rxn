@@ -47,7 +47,7 @@ args = parser.parse_args()
 data_type=args.dataset_name
 use_rdkit_features= args.use_rdkit_feats
 ext = '_'+ use_rdkit_features
-processed= 'processed_12'#+str(args.random_state)
+processed= 'processed-0'#+str(args.random_state)
 #inputs
 processed_path = os.path.join(args.dataset_path,data_type,processed)
 

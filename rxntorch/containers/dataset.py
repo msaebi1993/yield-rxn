@@ -21,8 +21,6 @@ from collections import defaultdict
 from .reaction import Rxn
 
 
-
-        
 class RxnGraphDataset():
     """Object for containing sets of reactions SMILES strings.
 
@@ -230,48 +228,41 @@ class RxnGraphDataset():
         rxn_mol=Chem.MolFromSmiles(smiles)
         symbols = [atom.GetSymbol() for atom in rxn_mol.GetAtoms()]
         all_atoms=set(symbols)
-        n_atoms=len(all_atoms)
+        n_atoms=len(rxn_mol.GetAtoms())
+        mapping=dict(zip( all_atoms, range(len(all_atoms))))      
 
-        mapping=dict(zip( all_atoms, range(len(all_atoms))))
-
-        for i, s in enumerate(smiles.split('.')):
-            mol = Chem.MolFromSmiles(s)
-            for atom in mol.GetAtoms():
-                comp[mapping[atom.GetSymbol()]] = i
-
+        for i, atom in enumerate(rxn_mol.GetAtoms()):
+            comp[i] = mapping[atom.GetSymbol()]
         n_comp = len(smiles.split('.'))
         rmol = Chem.MolFromSmiles(smiles)
         bond_map = {}
-        for bond in rmol.GetBonds():
-            a1 = bond.GetBeginAtom().GetIdx()- 1
-            a2 = bond.GetEndAtom().GetIdx() - 1
-            bond_map[(a1, a2)] = bond
 
-        binary_feats = torch.zeros((self.max_nbonds,self.max_natoms, self.max_natoms))
+        for bond in rmol.GetBonds():
+            a1 = bond.GetBeginAtom().GetIdx()
+            a2 = bond.GetEndAtom().GetIdx()
+            bond_map[(a1, a2)] = bond
+        binary_feats = torch.zeros((self.max_nbonds,self.max_natoms,self.max_natoms))
+   
         for i in range(n_atoms):
             for j in range(i+1, n_atoms):
-                if i == j:
-                    continue
                 if (i,j) in bond_map:
                     bond = bond_map[(i,j)]
+               
                     binary_feats[1:1+6,i,j] = binary_feats[1:1+6,j,i] = self.bond_features(bond)
                 elif (j,i) in bond_map:
                     bond = bond_map[(j,i)]
                     binary_feats[1:1+6,i,j] = binary_feats[1:1+6,j,i] = self.bond_features(bond)
                 else:
                     binary_feats[0,i,j] = binary_feats[0,j,i] = 1.0
-                binary_feats[-4,i,j] = binary_feats[-4,j,i] = 1.0 if comp[i] != comp[j] else 0.0
-                binary_feats[-3,i,j] = binary_feats[-3,j,i] = 1.0 if comp[i] == comp[j] else 0.0
-                binary_feats[-2,i,j] = binary_feats[-2,j,i] = 1.0 if n_comp == 1 else 0.0
-                binary_feats[-1,i,j] = binary_feats[-1,j,i] = 1.0 if n_comp > 1 else 0.0
+                #binary_feats[-2,i,j] = binary_feats[-2,j,i] = 1.0 if comp[i] != comp[j] else 0.0
+                #binary_feats[-1,i,j] = binary_feats[-1,j,i] = 1.0 if comp[i] == comp[j] else 0.0
+    
         return binary_feats
     
     @staticmethod
     def to_one_hot(codec, values):
         value_idxs = codec.transform(values)
         return torch.eye(len(codec.classes_), dtype=torch.float)[value_idxs]
-
-
 
     @staticmethod
     def bond_features(bond):
