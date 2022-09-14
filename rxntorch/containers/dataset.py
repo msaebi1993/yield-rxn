@@ -185,7 +185,7 @@ class RxnGraphDataset():
             n_bonds[a1] += 1
             n_bonds[a2] += 1
 
-        binary_feats = self.get_binary_features(smiles)
+        #binary_feats = self.get_binary_features(smiles)
 
         output["atom_feats"]=atom_feats
         output["bond_feats"]=bond_feats
@@ -193,7 +193,7 @@ class RxnGraphDataset():
         output["bond_graph"]=bond_graph
         output["n_bonds"]=n_bonds
         output["n_atoms"]=n_atoms
-        output["binary_feats"]=binary_feats
+        #output["binary_feats"]=binary_feats
         output["sparse_idx"]=sparse_idx
         #output["domain_feats"]=domain_features_final        
         return output  

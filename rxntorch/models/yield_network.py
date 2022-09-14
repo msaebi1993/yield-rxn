@@ -14,18 +14,18 @@ from sklearn.metrics import mean_squared_error as s_mse
 from sklearn.metrics import mean_absolute_error as s_mae
 
 class YieldNet(nn.Module):
-    def __init__(self, depth, dropout, afeats_size, bfeats_size, hidden_size, binary_size,dmfeats_size,max_nbonds,use_domain,abs_score,max_natoms):
+    def __init__(self, depth, dropout, afeats_size, bfeats_size, hidden_size,dmfeats_size,max_nbonds,use_domain,abs_score,max_natoms):
         super(YieldNet, self).__init__()
         self.hidden_size = hidden_size
         self.wln = WLNet(depth, dropout, afeats_size, bfeats_size, hidden_size)
-        self.attention = Attention(hidden_size, binary_size, max_nbonds,max_natoms)
-        self.yield_scoring= YieldScoring(hidden_size, binary_size, dmfeats_size, use_domain,abs_score)
+        self.attention = Attention(hidden_size,  max_nbonds,max_natoms)
+        self.yield_scoring= YieldScoring(hidden_size,  dmfeats_size, use_domain,abs_score)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, fatoms, fbonds, atom_nb, bond_nb, num_nbs, n_atoms, binary_feats, mask_neis, mask_atoms, sparse_idx,domain_feats):
+    def forward(self, fatoms, fbonds, atom_nb, bond_nb, num_nbs, n_atoms, mask_neis, mask_atoms, sparse_idx,domain_feats):
         local_features = self.wln(fatoms, fbonds, atom_nb, bond_nb, num_nbs, n_atoms, mask_neis, mask_atoms)
-        global_features = self.attention(local_features, binary_feats, sparse_idx)
-        yield_scores = self.yield_scoring(local_features, global_features, binary_feats, sparse_idx, domain_feats)
+        global_features = self.attention(local_features, sparse_idx)
+        yield_scores = self.yield_scoring(local_features, global_features, sparse_idx, domain_feats)
         
 
         return yield_scores
@@ -38,7 +38,7 @@ class YieldTrainer(nn.Module):
         super(YieldTrainer, self).__init__()
         cuda_condition = torch.cuda.is_available() and with_cuda
         self.device = torch.device("cuda" if cuda_condition else "cpu")
-        self.model = rxn_net
+        self.model = rxn_net 
         if cuda_condition and (torch.cuda.device_count() > 1):
             logging.info("Using {} GPUS".format(torch.cuda.device_count()))
             self.model = nn.DataParallel(self.model, device_ids=cuda_devices)
@@ -102,7 +102,7 @@ class YieldTrainer(nn.Module):
                 -1)
             
             yield_scores = self.model.forward(data['atom_feats'], data['bond_feats'],data['atom_graph'], 
-                                                data['bond_graph'], data['n_bonds'],data['n_atoms'], data['binary_feats'], 
+                                                data['bond_graph'], data['n_bonds'],data['n_atoms'], 
                                                 mask_neis, mask_atoms,data['sparse_idx'],data['domain_feats'])
             criteria=nn.MSELoss()
 

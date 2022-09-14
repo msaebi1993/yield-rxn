@@ -71,7 +71,7 @@ parser.add_argument("--log_freq", type=int, default=100, help="printing loss eve
 parser.add_argument("--seed", type=int, default=0, help="random seed")
 parser.add_argument("-ud","--use_domain", type=str, required=True, help="use domain features or not. options: rdkit: combination od rdkit feature and bozhao features. no_rdkit: only bozhao features. no_domain: neither.")
 parser.add_argument("-mb","--max_nbonds", type=int, default=7, help="maximum number of bonds for binary features")
-parser.add_argument("-ma","--max_natoms", type=int, default=100, help="maximum number of atoms for binary features")
+parser.add_argument("-ma","--max_natoms", type=int, default=200, help="maximum number of atoms for binary features")
 parser.add_argument("--abs", type=str, default='abs', help="Take the average over aboslute/no absolute/sigmoid/relu value of predicted yield")
 
 
@@ -184,12 +184,11 @@ test_dataset = RxnGD(test_set_domain_scaled, test_set_smiles, train_set_smiles, 
 
                    
 sample = train_dataset[3]
-afeats_size, bfeats_size, binary_size, dmfeats_size = (sample["atom_feats"].shape[-1], sample["bond_feats"].shape[-1],
-                                        sample["binary_feats"].shape[-1], sample['domain_feats'].shape[-1])
+afeats_size, bfeats_size,  dmfeats_size = (sample["atom_feats"].shape[-1], sample["bond_feats"].shape[-1],
+                                           sample['domain_feats'].shape[-1])
 
 
-d1,d2,d3 = sample["binary_feats"].shape
-binary_size= d3*d2
+
 
 
 logging.info("{:d} samples for training ,{:d} samples for testing".format(train_set.shape[0], test_set.shape[0]))
@@ -213,8 +212,9 @@ logging.info("Graph convolution layers: {}  Hidden size: {}".format(
 #Build RxnNet and RxnTrainer
 ################################################################
 
-net = YieldNet(depth=args.layers, dropout= args.dropout_rate, afeats_size=afeats_size, bfeats_size=bfeats_size,
-             hidden_size=args.hidden, binary_size=binary_size,dmfeats_size=dmfeats_size, max_nbonds=args.max_nbonds,use_domain=args.use_domain, abs_score=args.abs,max_natoms=args.max_natoms)
+net = YieldNet(depth=args.layers, dropout= args.dropout_rate, afeats_size=afeats_size, bfeats_size=bfeats_size, hidden_size=args.hidden, 
+                          dmfeats_size=dmfeats_size, max_nbonds=args.max_nbonds, use_domain=args.use_domain, abs_score=args.abs, max_natoms=args.max_natoms)
+                          
 logging.info("Total Parameters: {:,d}".format(sum([p.nelement() for p in net.parameters()])))
 
 logging.info("{:-^80}".format("Trainer"))

@@ -5,25 +5,24 @@ from .layers import Linear
 
 
 class Attention(nn.Module):
-    def __init__(self, hidden_size, binary_size, max_nbonds, max_natoms):
+    def __init__(self, hidden_size, max_nbonds, max_natoms):
         super(Attention, self).__init__()
         self.fcapair = Linear(hidden_size, hidden_size, bias=False)
-        self.fcbinary = Linear(int(max_natoms), hidden_size)
         self.fcattention = Linear(hidden_size, 1)
         cuda_condition= True
         self.device = torch.device("cuda" if cuda_condition else "cpu")
-    def forward(self, local_feats, binary_feats, sparse_idx):
+    def forward(self, local_feats, sparse_idx):
         local_pair = local_feats.unsqueeze(1) + local_feats.unsqueeze(2)
         
         local_features = self.fcapair(local_pair)
-        binary_features= self.fcbinary(binary_feats)
+       
         d1, d2, d3, d4 = local_features.shape
-        l1, l2, l3, l4 = binary_features.shape
+        
         
 
-        padded_binary_feats = F.pad(input=binary_features, pad=(0,0 , 0,d3-l3, 0,d2-l2), mode='constant', value=0)
         
-        attention_features = F.relu( local_features+ padded_binary_feats)
+        
+        attention_features = F.relu( local_features)
         
         
         attention_score = torch.sigmoid(self.fcattention(attention_features))
